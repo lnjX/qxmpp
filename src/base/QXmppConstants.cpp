@@ -147,5 +147,6 @@ const char* ns_mix_node_info = "urn:xmpp:mix:nodes:info";
 const char* ns_spoiler = "urn:xmpp:spoiler:0";
 // XEP-0405: Mediated Information eXchange (MIX): Participant Server Requirements
 const char* ns_mix_pam = "urn:xmpp:mix:pam:1";
+const char* ns_mix_pam_archiving = "urn:xmpp:mix:pam:1#archive";
 const char* ns_mix_roster = "urn:xmpp:mix:roster:0";
 const char* ns_mix_presence = "urn:xmpp:presence:0";
