@@ -80,6 +80,7 @@ private:
 };
 
 class QXmppStanzaPrivate;
+class QXmppStanzaErrorPrivate;
 
 /// \defgroup Stanzas
 
@@ -156,10 +157,7 @@ public:
         QString getTypeStr() const;
         void setTypeFromStr(const QString& type);
 
-        int m_code;
-        Type m_type;
-        Condition m_condition;
-        QString m_text;
+        QXmppStanzaErrorPrivate *d;
     };
 
     QXmppStanza(const QString& from = QString(), const QString& to = QString());
