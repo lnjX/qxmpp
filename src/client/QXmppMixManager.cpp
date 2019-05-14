@@ -26,6 +26,7 @@
 #include "QXmppClient.h"
 #include "QXmppDiscoveryManager.h"
 #include "QXmppMixIq.h"
+#include "QXmppMixItem.h"
 #include "QXmppUtils.h"
 
 #include <QDomElement>
@@ -273,6 +274,26 @@ bool QXmppMixManager::handleStanza(const QDomElement &element)
             return false;
         }
         return true;
+    } else if (element.tagName() == "message") {
+        QDomElement xElement = element.firstChildElement();
+        while (!xElement.isNull())
+        {
+			if (xElement.tagName() == "event" && xElement.namespaceURI() == ns_pubsub_event) {
+				QDomElement itemsElement = xElement.firstChildElement("items");
+				if (itemsElement.attribute("node") == ns_mix_node_participants) {
+					QDomElement itemElement = itemsElement.firstChildElement("item");
+					while (!itemElement.isNull()) {
+						QString id = itemElement.attribute("id");
+						QXmppMixParticipantItem item;
+						item.parse(QXmppElement(itemElement.firstChildElement()));
+
+						emit participantJoined(id, item);
+						itemElement = itemsElement.nextSiblingElement("item");
+					}
+				}
+			}
+            xElement = element.nextSiblingElement();
+        }
     }
     return false;
 }

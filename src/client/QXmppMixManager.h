@@ -93,6 +93,8 @@ signals:
     void channelDestroyed(const QXmppMixIq &iq);
     void subscriptionUpdated(const QXmppMixIq &iq);
 
+//	void participantJoined(const QString& channelJid, const QString &id, const QXmppMixParticipantItem &item);
+
 protected:
     void setClient(QXmppClient *client) override;
 
