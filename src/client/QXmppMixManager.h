@@ -46,6 +46,8 @@ private:
     bool m_canCreateChannel = false;
 };
 
+bool operator==(const QXmppMixService&, const QXmppMixService&);
+
 class QXmppMixManager : public QXmppClientExtension
 {
     Q_OBJECT

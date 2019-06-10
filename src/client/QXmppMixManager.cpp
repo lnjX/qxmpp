@@ -43,7 +43,7 @@ QString QXmppMixService::jid() const
     return m_jid;
 }
 
-void QXmppMixService::setJid(const QString &jid)
+void QXmppMixService::setJid(const QString& jid)
 {
     m_jid = jid;
 }
@@ -98,7 +98,8 @@ void QXmppMixManager::handleDiscoInfo(const QXmppDiscoveryIq &iq)
         return;
 
     for (const QXmppDiscoveryIq::Identity &identity : iq.identities()) {
-        if (identity.category() == "conference" && identity.type() == "mix") {
+    if (identity.category() == "conference" && (identity.type() == "mix"
+                                                || identity.type() == "text")) {
             QXmppMixService service;
             service.setJid(iq.from().isEmpty()
                            ? client()->configuration().domain()
@@ -274,27 +275,28 @@ bool QXmppMixManager::handleStanza(const QDomElement &element)
             return false;
         }
         return true;
-    } else if (element.tagName() == "message") {
-        QDomElement xElement = element.firstChildElement();
-        while (!xElement.isNull())
-        {
-			if (xElement.tagName() == "event" && xElement.namespaceURI() == ns_pubsub_event) {
-				QDomElement itemsElement = xElement.firstChildElement("items");
-				if (itemsElement.attribute("node") == ns_mix_node_participants) {
-					QDomElement itemElement = itemsElement.firstChildElement("item");
-					while (!itemElement.isNull()) {
-						QString id = itemElement.attribute("id");
-						QXmppMixParticipantItem item;
-						item.parse(QXmppElement(itemElement.firstChildElement()));
-
-						emit participantJoined(id, item);
-						itemElement = itemsElement.nextSiblingElement("item");
-					}
-				}
-			}
-            xElement = element.nextSiblingElement();
-        }
     }
+//    } else if (element.tagName() == "message") {
+//        QDomElement xElement = element.firstChildElement();
+//        while (!xElement.isNull())
+//        {
+//			if (xElement.tagName() == "event" && xElement.namespaceURI() == ns_pubsub_event) {
+//				QDomElement itemsElement = xElement.firstChildElement("items");
+//				if (itemsElement.attribute("node") == ns_mix_node_participants) {
+//					QDomElement itemElement = itemsElement.firstChildElement("item");
+//					while (!itemElement.isNull()) {
+//						QString id = itemElement.attribute("id");
+//						QXmppMixParticipantItem item;
+//						item.parse(QXmppElement(itemElement.firstChildElement()));
+
+//						emit participantJoined(id, item);
+//						itemElement = itemsElement.nextSiblingElement("item");
+//					}
+//				}
+//			}
+//            xElement = element.nextSiblingElement();
+//        }
+//    }
     return false;
 }
 
@@ -331,4 +333,11 @@ void QXmppMixManager::setClient(QXmppClient *client)
             m_mixServices.clear();
         });
     }
+}
+
+bool operator==(const QXmppMixService &a, const QXmppMixService &b)
+{
+    return a.jid() == b.jid()
+            && a.searchable() == b.searchable()
+            && a.canCreateChannel() == b.canCreateChannel();
 }
