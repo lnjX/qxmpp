@@ -29,6 +29,7 @@
 #include "QXmppRosterIq.h"
 #include "QXmppRosterManager.h"
 #include "QXmppUtils.h"
+#include "QXmppMixManager.h"
 
 class QXmppRosterManagerPrivate
 {
@@ -104,6 +105,8 @@ void QXmppRosterManager::_q_connected()
     QXmppRosterIq roster;
     roster.setType(QXmppIq::Get);
     roster.setFrom(client()->configuration().jid());
+    if (client()->findExtension<QXmppMixManager>())
+        roster.setMixAnnotate(true);
     d->rosterReqId = roster.id();
     if (client()->isAuthenticated())
         client()->sendPacket(roster);

@@ -140,7 +140,7 @@ void QXmppMixManager::joinChannel(const QString &channelJid, const QString &nick
 {
     QXmppMixIq iq;
     iq.setType(QXmppIq::Set);
-    iq.setTo(client()->configuration().domain());
+    iq.setTo(client()->configuration().jidBare());
     iq.setActionType(QXmppMixIq::ClientJoin);
     iq.setJid(channelJid);
     iq.setNodes(nodes);
