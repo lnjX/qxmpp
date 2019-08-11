@@ -48,7 +48,7 @@ set(INSTALL_HEADER_FILES
     # base/QXmppRtpChannel.h
     # base/QXmppRtpPacket.h
     base/QXmppSessionIq.h
-    base/QXmppSocks.h
+    # base/QXmppSocks.h
     base/QXmppStanza.h
     base/QXmppStream.h
     base/QXmppStreamFeatures.h
@@ -79,17 +79,21 @@ set(INSTALL_HEADER_FILES
     # client/QXmppTransferManager_p.h
     client/QXmppVCardManager.h
     client/QXmppVersionManager.h
-
-    # Server
-    server/QXmppDialback.h
-    server/QXmppIncomingClient.h
-    server/QXmppIncomingServer.h
-    server/QXmppOutgoingServer.h
-    server/QXmppPasswordChecker.h
-    server/QXmppServer.h
-    server/QXmppServerExtension.h
-    server/QXmppServerPlugin.h
 )
+
+if(NOT USE_WEBSOCKETS)
+    set(INSTALL_HEADER_FILES ${INSTALL_HEADER_FILES}
+	# Server
+	server/QXmppDialback.h
+	server/QXmppIncomingClient.h
+	server/QXmppIncomingServer.h
+	server/QXmppOutgoingServer.h
+	server/QXmppPasswordChecker.h
+	server/QXmppServer.h
+	server/QXmppServerExtension.h
+	server/QXmppServerPlugin.h
+    )
+endif()
 
 set(SOURCE_FILES
     # Base
@@ -126,7 +130,7 @@ set(SOURCE_FILES
     # base/QXmppRtpPacket.cpp
     base/QXmppSasl.cpp
     base/QXmppSessionIq.cpp
-    base/QXmppSocks.cpp
+    # base/QXmppSocks.cpp
     base/QXmppStanza.cpp
     base/QXmppStream.cpp
     base/QXmppStreamFeatures.cpp
@@ -158,17 +162,21 @@ set(SOURCE_FILES
     # client/QXmppTransferManager.cpp
     client/QXmppVCardManager.cpp
     client/QXmppVersionManager.cpp
-
-    # Server
-    server/QXmppDialback.cpp
-    server/QXmppIncomingClient.cpp
-    server/QXmppIncomingServer.cpp
-    server/QXmppOutgoingServer.cpp
-    server/QXmppPasswordChecker.cpp
-    server/QXmppServer.cpp
-    server/QXmppServerExtension.cpp
-    server/QXmppServerPlugin.cpp
 )
+
+if(NOT USE_WEBSOCKETS)
+	set(SOURCE_FILES ${SOURCE_FILES}
+		# Server
+		server/QXmppDialback.cpp
+		server/QXmppIncomingClient.cpp
+		server/QXmppIncomingServer.cpp
+		server/QXmppOutgoingServer.cpp
+		server/QXmppPasswordChecker.cpp
+		server/QXmppServer.cpp
+		server/QXmppServerExtension.cpp
+		server/QXmppServerPlugin.cpp
+	)
+endif()
 
 if(WITH_SPEEX)
     find_package(Speex REQUIRED)

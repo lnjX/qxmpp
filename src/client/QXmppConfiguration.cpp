@@ -76,8 +76,10 @@ public:
     QString saslAuthMechanism;
 
     QNetworkProxy networkProxy;
-
+#if QXMPP_USE_WEBSOCKETS
+#else
     QList<QSslCertificate> caCertificates;
+#endif
 };
 
 QXmppConfigurationPrivate::QXmppConfigurationPrivate()
@@ -586,15 +588,19 @@ int QXmppConfiguration::keepAliveTimeout() const
 }
 
 /// Specifies a list of trusted CA certificates.
-
+#if QXMPP_USE_WEBSOCKETS
+#else
 void QXmppConfiguration::setCaCertificates(const QList<QSslCertificate> &caCertificates)
 {
     d->caCertificates = caCertificates;
 }
+#endif
 
 /// Returns the a list of trusted CA certificates.
-
+#if QXMPP_USE_WEBSOCKETS
+#else
 QList<QSslCertificate> QXmppConfiguration::caCertificates() const
 {
     return d->caCertificates;
 }
+#endif

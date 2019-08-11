@@ -25,11 +25,11 @@
 #include <QDomElement>
 #include <QFileInfo>
 #include <QPluginLoader>
-#include <QSslCertificate>
-#include <QSslKey>
 #if QXMPP_USE_WEBSOCKETS
 #include <QWebSocket>
 #else
+#include <QSslKey>
+#include <QSslCertificate>
 #include <QSslSocket>
 #endif
 
@@ -104,9 +104,12 @@ public:
     QSet<QXmppSslServer*> serversForServers;
 
     // ssl
+#if QXMPP_USE_WEBSOCKETS
+#else
     QList<QSslCertificate> caCertificates;
     QSslCertificate localCertificate;
     QSslKey privateKey;
+#endif
 
 private:
     bool loaded;
@@ -448,6 +451,8 @@ QVariantMap QXmppServer::statistics() const
 
 void QXmppServer::addCaCertificates(const QString &path)
 {
+#if QXMPP_USE_WEBSOCKETS
+#else
     // load certificates
     if (path.isEmpty()) {
         d->caCertificates = QList<QSslCertificate>();
@@ -461,6 +466,7 @@ void QXmppServer::addCaCertificates(const QString &path)
     // reconfigure servers
     foreach (QXmppSslServer *server, d->serversForClients + d->serversForServers)
         server->addCaCertificates(d->caCertificates);
+#endif
 }
 
 /// Sets the path for the local SSL certificate.
@@ -469,6 +475,8 @@ void QXmppServer::addCaCertificates(const QString &path)
 
 void QXmppServer::setLocalCertificate(const QString &path)
 {
+#if QXMPP_USE_WEBSOCKETS
+#else
     // load certificate
     QSslCertificate certificate;
     QFile file(path);
@@ -484,12 +492,15 @@ void QXmppServer::setLocalCertificate(const QString &path)
     // reconfigure servers
     foreach (QXmppSslServer *server, d->serversForClients + d->serversForServers)
         server->setLocalCertificate(d->localCertificate);
+#endif
 }
 
 /// Sets the local SSL certificate
 ///
 /// \param certificate
 
+#if QXMPP_USE_WEBSOCKETS
+#else
 void QXmppServer::setLocalCertificate(const QSslCertificate &certificate)
 {
     d->localCertificate = certificate;
@@ -498,6 +509,7 @@ void QXmppServer::setLocalCertificate(const QSslCertificate &certificate)
     foreach (QXmppSslServer *server, d->serversForClients + d->serversForServers)
         server->setLocalCertificate(d->localCertificate);
 }
+#endif
 
 /// Sets the path for the local SSL private key.
 ///

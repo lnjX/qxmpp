@@ -146,9 +146,11 @@ public:
 
     int keepAliveTimeout() const;
     void setKeepAliveTimeout(int secs);
-
+#if QXMPP_USE_WEBSOCKETS
+#else
     QList<QSslCertificate> caCertificates() const;
     void setCaCertificates(const QList<QSslCertificate> &);
+#endif
 
 private:
     QSharedDataPointer<QXmppConfigurationPrivate> d;

@@ -139,10 +139,12 @@ class QXMPP_EXPORT QXmppSslServer : public QTcpServer
 public:
     QXmppSslServer(QObject *parent = 0);
     ~QXmppSslServer();
-
+#if QXMPP_USE_WEBSOCKETS
+#else
     void addCaCertificates(const QList<QSslCertificate> &certificates);
     void setLocalCertificate(const QSslCertificate &certificate);
     void setPrivateKey(const QSslKey &key);
+#endif
 
 signals:
     /// This signal is emitted when a new connection is established.

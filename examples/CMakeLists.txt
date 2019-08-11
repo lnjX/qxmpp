@@ -13,7 +13,7 @@ add_simple_example(1_echoClient)
 add_simple_example(2_rosterHandling)
 # add_simple_example(3_transferHandling)
 add_simple_example(7_archiveHandling)
-add_simple_example(8_server)
+# add_simple_example(8_server)
 
 add_subdirectory(example_5_rpcInterface)
 add_subdirectory(example_6_rpcClient)
