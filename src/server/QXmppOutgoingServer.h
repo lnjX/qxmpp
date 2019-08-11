@@ -72,7 +72,10 @@ private slots:
     void _q_dnsLookupFinished();
     void _q_socketDisconnected();
     void sendDialback();
+#if QXMPP_USE_WEBSOCKETS
+#else
     void slotSslErrors(const QList<QSslError> &errors);
+#endif
     void socketError(QAbstractSocket::SocketError error);
 
 private:

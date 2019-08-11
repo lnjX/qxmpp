@@ -44,15 +44,15 @@ set(INSTALL_HEADER_FILES
     base/QXmppResultSet.h
     base/QXmppRosterIq.h
     base/QXmppRpcIq.h
-    base/QXmppRtcpPacket.h
-    base/QXmppRtpChannel.h
-    base/QXmppRtpPacket.h
+    # base/QXmppRtcpPacket.h
+    # base/QXmppRtpChannel.h
+    # base/QXmppRtpPacket.h
     base/QXmppSessionIq.h
     base/QXmppSocks.h
     base/QXmppStanza.h
     base/QXmppStream.h
     base/QXmppStreamFeatures.h
-    base/QXmppStun.h
+    # base/QXmppStun.h
     base/QXmppUtils.h
     base/QXmppVCardIq.h
     base/QXmppVersionIq.h
@@ -60,7 +60,7 @@ set(INSTALL_HEADER_FILES
     # Client
     client/QXmppArchiveManager.h
     client/QXmppBookmarkManager.h
-    client/QXmppCallManager.h
+    # client/QXmppCallManager.h
     client/QXmppCarbonManager.h
     client/QXmppClient.h
     client/QXmppClientExtension.h
@@ -75,8 +75,8 @@ set(INSTALL_HEADER_FILES
     client/QXmppRemoteMethod.h
     client/QXmppRosterManager.h
     client/QXmppRpcManager.h
-    client/QXmppTransferManager.h
-    client/QXmppTransferManager_p.h
+    # client/QXmppTransferManager.h
+    # client/QXmppTransferManager_p.h
     client/QXmppVCardManager.h
     client/QXmppVersionManager.h
 
@@ -121,18 +121,18 @@ set(SOURCE_FILES
     base/QXmppResultSet.cpp
     base/QXmppRosterIq.cpp
     base/QXmppRpcIq.cpp
-    base/QXmppRtcpPacket.cpp
-    base/QXmppRtpChannel.cpp
-    base/QXmppRtpPacket.cpp
+    # base/QXmppRtcpPacket.cpp
+    # base/QXmppRtpChannel.cpp
+    # base/QXmppRtpPacket.cpp
     base/QXmppSasl.cpp
     base/QXmppSessionIq.cpp
     base/QXmppSocks.cpp
     base/QXmppStanza.cpp
     base/QXmppStream.cpp
     base/QXmppStreamFeatures.cpp
-    base/QXmppStreamInitiationIq.cpp
+    # base/QXmppStreamInitiationIq.cpp
     base/QXmppStreamManagement.cpp
-    base/QXmppStun.cpp
+    # base/QXmppStun.cpp
     base/QXmppUtils.cpp
     base/QXmppVCardIq.cpp
     base/QXmppVersionIq.cpp
@@ -141,7 +141,7 @@ set(SOURCE_FILES
     client/QXmppDiscoveryManager.cpp
     client/QXmppArchiveManager.cpp
     client/QXmppBookmarkManager.cpp
-    client/QXmppCallManager.cpp
+    # client/QXmppCallManager.cpp
     client/QXmppCarbonManager.cpp
     client/QXmppClient.cpp
     client/QXmppClientExtension.cpp
@@ -155,7 +155,7 @@ set(SOURCE_FILES
     client/QXmppRemoteMethod.cpp
     client/QXmppRosterManager.cpp
     client/QXmppRpcManager.cpp
-    client/QXmppTransferManager.cpp
+    # client/QXmppTransferManager.cpp
     client/QXmppVCardManager.cpp
     client/QXmppVersionManager.cpp
 

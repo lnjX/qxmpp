@@ -95,9 +95,12 @@ QXmppOutgoingServer::QXmppOutgoingServer(const QString &domain, QObject *parent)
     d->localDomain = domain;
     d->ready = false;
 
+#if QXMPP_USE_WEBSOCKETS
+#else
     check = connect(socket, SIGNAL(sslErrors(QList<QSslError>)),
                     this, SLOT(slotSslErrors(QList<QSslError>)));
     Q_ASSERT(check);
+#endif
 }
 
 /// Destroys the stream.
@@ -345,7 +348,8 @@ void QXmppOutgoingServer::sendDialback()
         sendPacket(verify);
     }
 }
-
+#if QXMPP_USE_WEBSOCKETS
+#else
 void QXmppOutgoingServer::slotSslErrors(const QList<QSslError> &errors)
 {
     warning("SSL errors");
@@ -353,6 +357,7 @@ void QXmppOutgoingServer::slotSslErrors(const QList<QSslError> &errors)
         warning(errors.at(i).errorString());
     socket()->ignoreSslErrors();
 }
+#endif
 
 void QXmppOutgoingServer::socketError(QAbstractSocket::SocketError error)
 {

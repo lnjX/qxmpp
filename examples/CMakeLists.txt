@@ -11,7 +11,7 @@ include_directories(${PROJECT_BINARY_DIR}/src/base)
 add_simple_example(0_connected)
 add_simple_example(1_echoClient)
 add_simple_example(2_rosterHandling)
-add_simple_example(3_transferHandling)
+# add_simple_example(3_transferHandling)
 add_simple_example(7_archiveHandling)
 add_simple_example(8_server)
 

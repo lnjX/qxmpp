@@ -77,9 +77,11 @@ signals:
 
     /// This signal is emitted when an IQ is received.
     void iqReceived(const QXmppIq&);
-
+#if QXMPP_USE_WEBSOCKETS
+#else
     /// This signal is emitted when SSL errors are encountered.
     void sslErrors(const QList<QSslError> &errors);
+#endif
 
 protected:
     /// \cond
@@ -96,7 +98,10 @@ private slots:
     void _q_dnsLookupFinished();
     void _q_socketDisconnected();
     void socketError(QAbstractSocket::SocketError);
+#if QXMPP_USE_WEBSOCKETS
+#else
     void socketSslErrors(const QList<QSslError>&);
+#endif
 
     void pingStart();
     void pingStop();

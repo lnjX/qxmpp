@@ -202,9 +202,12 @@ QXmppOutgoingClient::QXmppOutgoingClient(QObject *parent)
                     this, SLOT(_q_socketDisconnected()));
     Q_ASSERT(check);
 
+#if QXMPP_USE_WEBSOCKETS
+#else
     check = connect(socket, SIGNAL(sslErrors(QList<QSslError>)),
                     this, SLOT(socketSslErrors(QList<QSslError>)));
     Q_ASSERT(check);
+#endif
 
     check = connect(socket, SIGNAL(error(QAbstractSocket::SocketError)),
                     this, SLOT(socketError(QAbstractSocket::SocketError)));
@@ -328,7 +331,8 @@ void QXmppOutgoingClient::_q_socketDisconnected()
         emit disconnected();
     }
 }
-
+#if QXMPP_USE_WEBSOCKETS
+#else
 void QXmppOutgoingClient::socketSslErrors(const QList<QSslError> &errors)
 {
     // log errors
@@ -343,6 +347,7 @@ void QXmppOutgoingClient::socketSslErrors(const QList<QSslError> &errors)
     if (configuration().ignoreSslErrors())
         socket()->ignoreSslErrors();
 }
+#endif
 
 void QXmppOutgoingClient::socketError(QAbstractSocket::SocketError socketError)
 {
