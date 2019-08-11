@@ -22,7 +22,6 @@
  *
  */
 
-
 #include "QXmppConstants_p.h"
 #include "QXmppLogger.h"
 #include "QXmppStanza.h"
@@ -35,10 +34,15 @@
 #include <QHostAddress>
 #include <QMap>
 #include <QRegExp>
-#include <QSslSocket>
 #include <QStringList>
 #include <QTime>
 #include <QXmlStreamWriter>
+
+#if QXMPP_USE_WEBSOCKETS
+#include <QWebSocket>
+#else
+#include <QSslSocket>
+#endif
 
 static bool randomSeeded = false;
 static const QByteArray streamRootElementEnd = "</stream:stream>";
@@ -49,7 +53,7 @@ public:
     QXmppStreamPrivate();
 
     QByteArray dataBuffer;
-    QSslSocket* socket;
+    QXmppSocket* socket;
 
     // incoming stream state
     QByteArray streamStart;
@@ -101,7 +105,11 @@ void QXmppStream::disconnectFromHost()
         }
         // FIXME: according to RFC 6120 section 4.4, we should wait for
         // the incoming stream to end before closing the socket
+#if QXMPP_USE_WEBSOCKETS
+        d->socket->close();
+#else
         d->socket->disconnectFromHost();
+#endif
     }
 }
 
@@ -135,7 +143,11 @@ bool QXmppStream::sendData(const QByteArray &data)
     logSent(QString::fromUtf8(data));
     if (!d->socket || d->socket->state() != QAbstractSocket::ConnectedState)
         return false;
+#if QXMPP_USE_WEBSOCKETS
+    return d->socket->sendBinaryMessage(data) == data.size();
+#else
     return d->socket->write(data) == data.size();
+#endif
 }
 
 /// Sends an XMPP packet to the peer.
@@ -160,18 +172,18 @@ bool QXmppStream::sendPacket(const QXmppStanza &packet)
     return success;
 }
 
-/// Returns the QSslSocket used for this stream.
+/// Returns the socket used for this stream.
 ///
 
-QSslSocket *QXmppStream::socket() const
+QXmppSocket *QXmppStream::socket() const
 {
     return d->socket;
 }
 
-/// Sets the QSslSocket used for this stream.
+/// Sets the socket used for this stream.
 ///
 
-void QXmppStream::setSocket(QSslSocket *socket)
+void QXmppStream::setSocket(QXmppSocket *socket)
 {
     bool check;
     Q_UNUSED(check);
@@ -193,9 +205,12 @@ void QXmppStream::setSocket(QSslSocket *socket)
                     this, SLOT(_q_socketError(QAbstractSocket::SocketError)));
     Q_ASSERT(check);
 
-    check = connect(socket, SIGNAL(readyRead()),
+#if QXMPP_USE_WEBSOCKETS
+//    connect(socket, &QWebSocket::binaryMessageReceived, this, &QXmppStream::_q_)
+#else
+    connect(socket, SIGNAL(readyRead()),
                     this, SLOT(_q_socketReadyRead()));
-    Q_ASSERT(check);
+#endif
 }
 
 void QXmppStream::_q_socketConnected()
@@ -220,7 +235,10 @@ void QXmppStream::_q_socketError(QAbstractSocket::SocketError socketError)
 
 void QXmppStream::_q_socketReadyRead()
 {
+#if QXMPP_USE_WEBSOCKETS
+#else
     d->dataBuffer.append(d->socket->readAll());
+#endif
 
     // handle whitespace pings
     if (!d->dataBuffer.isEmpty() && d->dataBuffer.trimmed().isEmpty()) {

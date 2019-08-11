@@ -39,7 +39,7 @@ class QXMPP_EXPORT QXmppIncomingServer : public QXmppStream
     Q_OBJECT
 
 public:
-    QXmppIncomingServer(QSslSocket *socket, const QString &domain, QObject *parent);
+    QXmppIncomingServer(QXmppSocket *socket, const QString &domain, QObject *parent);
     ~QXmppIncomingServer();
 
     bool isConnected() const;

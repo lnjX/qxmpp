@@ -90,10 +90,13 @@ void QXmppIncomingClientPrivate::checkCredentials(const QByteArray &response)
 
 QString QXmppIncomingClientPrivate::origin() const
 {
+#if QXMPP_USE_WEBSOCKETS
+#else
     QSslSocket *socket = q->socket();
     if (socket)
         return socket->peerAddress().toString() + " " + QString::number(socket->peerPort());
     else
+#endif
         return "<unknown>";
 }
 
@@ -104,7 +107,7 @@ QString QXmppIncomingClientPrivate::origin() const
 /// \param parent The parent QObject for the stream (optional).
 ///
 
-QXmppIncomingClient::QXmppIncomingClient(QSslSocket *socket, const QString &domain, QObject *parent)
+QXmppIncomingClient::QXmppIncomingClient(QXmppSocket *socket, const QString &domain, QObject *parent)
     : QXmppStream(parent)
 {
     bool check;
@@ -114,9 +117,12 @@ QXmppIncomingClient::QXmppIncomingClient(QSslSocket *socket, const QString &doma
     d->domain = domain;
 
     if (socket) {
+#if QXMPP_USE_WEBSOCKETS
+#else
         check = connect(socket, SIGNAL(disconnected()),
                         this, SLOT(onSocketDisconnected()));
         Q_ASSERT(check);
+#endif
 
         setSocket(socket);
     }
@@ -216,8 +222,11 @@ void QXmppIncomingClient::handleStream(const QDomElement &streamElement)
 
     // send stream features
     QXmppStreamFeatures features;
+#if QXMPP_USE_WEBSOCKETS
+#else
     if (socket() && !socket()->isEncrypted() && !socket()->localCertificate().isNull() && !socket()->privateKey().isNull())
         features.setTlsMode(QXmppStreamFeatures::Enabled);
+#endif
     if (!d->jid.isEmpty())
     {
         features.setBindMode(QXmppStreamFeatures::Required);
@@ -244,8 +253,11 @@ void QXmppIncomingClient::handleStanza(const QDomElement &nodeRecv)
     if (ns == ns_tls && nodeRecv.tagName() == QLatin1String("starttls"))
     {
         sendData("<proceed xmlns='urn:ietf:params:xml:ns:xmpp-tls'/>");
+#if QXMPP_USE_WEBSOCKETS
+#else
         socket()->flush();
         socket()->startServerEncryption();
+#endif
         return;
     }
     else if (ns == ns_sasl)

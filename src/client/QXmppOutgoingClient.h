@@ -57,7 +57,7 @@ public:
     bool isConnected() const;
     bool isClientStateIndicationEnabled() const;
 
-    QSslSocket *socket() const { return QXmppStream::socket(); };
+    QXmppSocket *socket() const { return QXmppStream::socket(); };
     QXmppStanza::Error::Condition xmppStreamError();
 
     QXmppConfiguration& configuration();

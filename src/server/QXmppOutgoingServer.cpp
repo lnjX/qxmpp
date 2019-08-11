@@ -23,7 +23,11 @@
 
 #include <QDomElement>
 #include <QSslKey>
+#if QXMPP_USE_WEBSOCKETS
+#include <QWebSocket>
+#else
 #include <QSslSocket>
+#endif
 #include <QTimer>
 #include <QDnsLookup>
 
@@ -61,7 +65,11 @@ QXmppOutgoingServer::QXmppOutgoingServer(const QString &domain, QObject *parent)
     Q_UNUSED(check);
 
     // socket initialisation
-    QSslSocket *socket = new QSslSocket(this);
+#if QXMPP_USE_WEBSOCKETS
+    auto *socket = new QXmppSocket();
+#else
+    auto *socket = new QXmppSocket(this);
+#endif
     setSocket(socket);
 
     check = connect(socket, SIGNAL(disconnected()),
@@ -132,13 +140,15 @@ void QXmppOutgoingServer::_q_dnsLookupFinished()
         host = d->remoteDomain;
         port = 5269;
     }
-
+#if QXMPP_USE_WEBSOCKETS
+#else
     // set the name the SSL certificate should match
     socket()->setPeerVerifyName(d->remoteDomain);
 
     // connect to server
     info(QString("Connecting to %1:%2").arg(host, QString::number(port)));
     socket()->connectToHost(host, port);
+#endif
 }
 
 void QXmppOutgoingServer::_q_socketDisconnected()
@@ -178,7 +188,8 @@ void QXmppOutgoingServer::handleStanza(const QDomElement &stanza)
     {
         QXmppStreamFeatures features;
         features.parse(stanza);
-
+#if QXMPP_USE_WEBSOCKETS
+#else
         if (!socket()->isEncrypted())
         {
             // check we can satisfy TLS constraints
@@ -198,6 +209,7 @@ void QXmppOutgoingServer::handleStanza(const QDomElement &stanza)
                 return;
             }
         }
+#endif
 
         // send dialback if needed
         d->dialbackTimer->stop();
@@ -208,7 +220,10 @@ void QXmppOutgoingServer::handleStanza(const QDomElement &stanza)
         if (stanza.tagName() == QLatin1String("proceed"))
         {
             debug("Starting encryption");
+#if QXMPP_USE_WEBSOCKETS
+#else
             socket()->startClientEncryption();
+#endif
             return;
         }
     }

@@ -24,9 +24,13 @@
 
 #include <QCryptographicHash>
 #include <QNetworkProxy>
-#include <QSslSocket>
 #include <QUrl>
 #include <QDnsLookup>
+#if QXMPP_USE_WEBSOCKETS
+#include <QWebSocket>
+#else
+#include <QSslSocket>
+#endif
 
 #include "QXmppConfiguration.h"
 #include "QXmppConstants_p.h"
@@ -140,6 +144,8 @@ void QXmppOutgoingClientPrivate::connectToHost(const QString &host, quint16 port
 {
     q->info(QString("Connecting to %1:%2").arg(host, QString::number(port)));
 
+#if QXMPP_USE_WEBSOCKETS
+#else
     // override CA certificates if requested
     if (!config.caCertificates().isEmpty())
         q->socket()->setCaCertificates(config.caCertificates());
@@ -161,6 +167,7 @@ void QXmppOutgoingClientPrivate::connectToHost(const QString &host, quint16 port
     } else {
         q->socket()->connectToHost(host, port);
     }
+#endif
 }
 
 void QXmppOutgoingClientPrivate::connectToNextDNSHost()
@@ -184,7 +191,11 @@ QXmppOutgoingClient::QXmppOutgoingClient(QObject *parent)
     Q_UNUSED(check);
 
     // initialise socket
-    QSslSocket *socket = new QSslSocket(this);
+#if QXMPP_USE_WEBSOCKETS
+    auto *socket = new QXmppSocket();
+#else
+    auto *socket = new QXmppSocket(this);
+#endif
     setSocket(socket);
 
     check = connect(socket, SIGNAL(disconnected()),
@@ -413,7 +424,8 @@ void QXmppOutgoingClient::handleStanza(const QDomElement &nodeRecv)
 
         if(features.clientStateIndicationMode() == QXmppStreamFeatures::Enabled)
             d->clientStateIndicationEnabled = true;
-
+#if QXMPP_USE_WEBSOCKETS
+#else
         if (!socket()->isEncrypted())
         {
             // determine TLS mode to use
@@ -444,6 +456,7 @@ void QXmppOutgoingClient::handleStanza(const QDomElement &nodeRecv)
                 return;
             }
         }
+#endif
 
         // handle authentication
         const bool nonSaslAvailable = features.nonSaslAuthMode() != QXmppStreamFeatures::Disabled;
@@ -572,7 +585,10 @@ void QXmppOutgoingClient::handleStanza(const QDomElement &nodeRecv)
         if(nodeRecv.tagName() == "proceed")
         {
             debug("Starting encryption");
+#if QXMPP_USE_WEBSOCKETS
+#else
             socket()->startClientEncryption();
+#endif
             return;
         }
     }

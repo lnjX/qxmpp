@@ -32,7 +32,13 @@
 class QDomElement;
 class QSslCertificate;
 class QSslKey;
+#if QXMPP_USE_WEBSOCKETS
+class QWebSocket;
+using QXmppSocket = QWebSocket;
+#else
 class QSslSocket;
+using QXmppSocket = QSslSocket;
+#endif
 
 class QXmppDialback;
 class QXmppIncomingClient;
@@ -108,12 +114,12 @@ public slots:
     void handleElement(const QDomElement &element);
 
 private slots:
-    void _q_clientConnection(QSslSocket *socket);
+    void _q_clientConnection(QXmppSocket *socket);
     void _q_clientConnected();
     void _q_clientDisconnected();
     void _q_dialbackRequestReceived(const QXmppDialback &dialback);
     void _q_outgoingServerDisconnected();
-    void _q_serverConnection(QSslSocket *socket);
+    void _q_serverConnection(QXmppSocket *socket);
     void _q_serverDisconnected();
 
 private:
@@ -140,7 +146,7 @@ public:
 
 signals:
     /// This signal is emitted when a new connection is established.
-    void newConnection(QSslSocket *socket);
+    void newConnection(QXmppSocket *socket);
 
 private:
     void incomingConnection(qintptr socketDescriptor) override;

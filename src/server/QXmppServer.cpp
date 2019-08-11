@@ -27,7 +27,11 @@
 #include <QPluginLoader>
 #include <QSslCertificate>
 #include <QSslKey>
+#if QXMPP_USE_WEBSOCKETS
+#include <QWebSocket>
+#else
 #include <QSslSocket>
+#endif
 
 #include "QXmppConstants_p.h"
 #include "QXmppDialback.h"
@@ -552,9 +556,7 @@ bool QXmppServer::listenForClients(const QHostAddress &address, quint16 port)
     server->setLocalCertificate(d->localCertificate);
     server->setPrivateKey(d->privateKey);
 
-    check = connect(server, SIGNAL(newConnection(QSslSocket*)),
-                    this, SLOT(_q_clientConnection(QSslSocket*)));
-    Q_ASSERT(check);
+    connect(server, &QXmppSslServer::newConnection, this, &QXmppServer::_q_clientConnection);
 
     if (!server->listen(address, port)) {
         d->warning(QString("Could not start listening for C2S on %1 %2").arg(address.toString(), QString::number(port)));
@@ -615,9 +617,7 @@ bool QXmppServer::listenForServers(const QHostAddress &address, quint16 port)
     server->setLocalCertificate(d->localCertificate);
     server->setPrivateKey(d->privateKey);
 
-    check = connect(server, SIGNAL(newConnection(QSslSocket*)),
-                    this, SLOT(_q_serverConnection(QSslSocket*)));
-    Q_ASSERT(check);
+    connect(server, &QXmppSslServer::newConnection, this, &QXmppServer::_q_serverConnection);
 
     if (!server->listen(address, port)) {
         d->warning(QString("Could not start listening for S2S on %1 %2").arg(address.toString(), QString::number(port)));
@@ -696,7 +696,7 @@ void QXmppServer::addIncomingClient(QXmppIncomingClient *stream)
 ///
 /// \param socket
 
-void QXmppServer::_q_clientConnection(QSslSocket *socket)
+void QXmppServer::_q_clientConnection(QXmppSocket *socket)
 {
     // check the socket didn't die since the signal was emitted
     if (socket->state() != QAbstractSocket::ConnectedState) {
@@ -820,7 +820,7 @@ void QXmppServer::_q_outgoingServerDisconnected()
 ///
 /// \param socket
 
-void QXmppServer::_q_serverConnection(QSslSocket *socket)
+void QXmppServer::_q_serverConnection(QXmppSocket *socket)
 {
     bool check;
     Q_UNUSED(check);
@@ -893,17 +893,23 @@ QXmppSslServer::~QXmppSslServer()
 
 void QXmppSslServer::incomingConnection(qintptr socketDescriptor)
 {
-    QSslSocket *socket = new QSslSocket;
+    auto *socket = new QXmppSocket;
+#if QXMPP_USE_WEBSOCKETS
+#else
     if (!socket->setSocketDescriptor(socketDescriptor)) {
         delete socket;
         return;
     }
+#endif
 
     if (!d->localCertificate.isNull() && !d->privateKey.isNull()) {
+#if QXMPP_USE_WEBSOCKETS
+#else
         socket->setProtocol(QSsl::AnyProtocol);
         socket->addCaCertificates(d->caCertificates);
         socket->setLocalCertificate(d->localCertificate);
         socket->setPrivateKey(d->privateKey);
+#endif
     }
     emit newConnection(socket);
 }

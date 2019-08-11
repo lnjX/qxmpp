@@ -21,7 +21,11 @@
  *
  */
 
+#if QXMPP_USE_WEBSOCKETS
+#include <QWebSocket>
+#else
 #include <QSslSocket>
+#endif
 #include <QTimer>
 
 #include "QXmppClient.h"

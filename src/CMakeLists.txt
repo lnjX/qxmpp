@@ -1,3 +1,10 @@
+option(WITH_SPEEX "Support the Speex codec" OFF)
+option(WITH_OPUS "Support the Opus codec" OFF)
+option(WITH_THEORA "Support the Theora codec" OFF)
+option(WITH_VPX "Support the VPX codec" OFF)
+option(USE_WEBSOCKETS "Use websockets instead of tcp sockets (required when building for WebAssembly)" OFF)
+option(BUILD_SHARED "Build SHARED library" ON)
+
 add_definitions(-DQXMPP_BUILD)
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/base)
@@ -163,12 +170,6 @@ set(SOURCE_FILES
     server/QXmppServerPlugin.cpp
 )
 
-option(WITH_SPEEX "Support the Speex codec" OFF)
-option(WITH_OPUS "Support the Opus codec" OFF)
-option(WITH_THEORA "Support the Theora codec" OFF)
-option(WITH_VPX "Support the VPX codec" OFF)
-option(BUILD_SHARED "Build SHARED library" ON)
-
 if(WITH_SPEEX)
     find_package(Speex REQUIRED)
     include_directories(${Speex_INCLUDE_DIRS})
@@ -191,7 +192,12 @@ if(WITH_VPX)
     find_package(VPX REQUIRED)
     include_directories(${VPX_INCLUDE_DIRS})
     set(MULTIMEDIA_LIBS ${MULTIMEDIA_LIBS} ${VPX_LIBRARIES})
-    add_definitions(-DQXMPP_USE_VPX)
+endif()
+
+if(USE_WEBSOCKETS)
+    find_package(Qt5WebSockets REQUIRED)
+    add_definitions(-DQXMPP_USE_WEBSOCKETS)
+    set(_Qt5WebSockets Qt5::WebSockets)
 endif()
 
 if(BUILD_SHARED)
@@ -220,6 +226,7 @@ target_link_libraries(qxmpp
     Qt5::Core
     Qt5::Network
     Qt5::Xml
+    ${_Qt5WebSockets}
     PRIVATE
     ${MULTIMEDIA_LIBS}
 )

@@ -22,7 +22,11 @@
  */
 
 #include <QNetworkProxy>
+#if QXMPP_USE_WEBSOCKETS
+#include <QWebSocket>
+#else
 #include <QSslSocket>
+#endif
 
 #include "QXmppConfiguration.h"
 #include "QXmppUtils.h"

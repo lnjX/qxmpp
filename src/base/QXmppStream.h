@@ -22,7 +22,6 @@
  *
  */
 
-
 #ifndef QXMPPSTREAM_H
 #define QXMPPSTREAM_H
 
@@ -30,8 +29,15 @@
 #include <QObject>
 #include "QXmppLogger.h"
 
-class QDomElement;
+#if QXMPP_USE_WEBSOCKETS
+class QWebSocket;
+using QXmppSocket = QWebSocket;
+#else
 class QSslSocket;
+using QXmppSocket = QSslSocket;
+#endif
+
+class QDomElement;
 class QXmppStanza;
 class QXmppStreamPrivate;
 
@@ -58,8 +64,8 @@ signals:
 
 protected:
     // Access to underlying socket
-    QSslSocket *socket() const;
-    void setSocket(QSslSocket *socket);
+    QXmppSocket *socket() const;
+    void setSocket(QXmppSocket *socket);
 
     // Overridable methods
     virtual void handleStart();
