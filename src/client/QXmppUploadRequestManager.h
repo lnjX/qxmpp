@@ -75,6 +75,8 @@ public:
     bool serviceFound() const;
 
     QList<QXmppUploadService> uploadServices() const;
+    
+    bool handleStanza(const QDomElement &stanza) override;
 
 signals:
     /// Emitted when an upload slot was received.
@@ -87,7 +89,6 @@ signals:
 
 protected:
     void setClient(QXmppClient *client) override;
-    bool handleStanza(const QDomElement &stanza) override;
 
 private:
     void handleDiscoInfo(const QXmppDiscoveryIq &iq);

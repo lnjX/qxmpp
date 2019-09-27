@@ -28,6 +28,7 @@
 #include "QXmppClient.h"
 #include "QXmppDiscoveryManager.h"
 #include "QXmppLogger.h"
+#include "QXmppHttpUploadIq.h"
 #include "util.h"
 
 class TestHelper : public QObject 
@@ -48,34 +49,25 @@ private:
     bool error;
 };
 
-class ManagerHeir : public QXmppUploadRequestManager {                  //i need this to give up protected methods to be able to test them
-public:
-    bool handleStanza(const QDomElement & stanza) override;
-};
-
-class DiscoveryHeir : public QXmppDiscoveryManager {                       //i need this to emulate discovery events
-    
-};
-
 class tst_QXmppUploadRequestManager : public QObject
 {
     Q_OBJECT
 private slots:
     void initTestCase();
     
-    void testDiscoveryService();
     void testDiscoveryService_data();
+    void testDiscoveryService();
     
-    void testHandleStanza();
     void testHandleStanza_data();
+    void testHandleStanza();
     
-    void testSending();
     void testSending_data();
+    void testSending();
     
 private:
-    ManagerHeir* manager;
+    QXmppUploadRequestManager* manager;
     QXmppClient client;
-    DiscoveryHeir* discovery;
+    QXmppDiscoveryManager* discovery;
     QString uploadServiceName;
     quint64 maxFileSize;
 };
@@ -158,9 +150,9 @@ void tst_QXmppUploadRequestManager::testHandleStanza()
     QCOMPARE(doc.setContent(xml, true), true);
     QDomElement element = doc.documentElement();
 
-    bool realAaccepted = manager->handleStanza(element);
+    bool realAccepted = manager->handleStanza(element);
 
-    QCOMPARE(realAaccepted, accepted);
+    QCOMPARE(realAccepted, accepted);
 }
 
 void tst_QXmppUploadRequestManager::testDiscoveryService()
@@ -192,7 +184,7 @@ void tst_QXmppUploadRequestManager::testDiscoveryService_data()
                     "</iq>")
         << false;
         
-    QTest::newRow("HTTPUploadDiscoveryStansaIq")
+    QTest::newRow("HTTPUploadDiscoveryStanzaIq")
     << QByteArray("<iq from='" + uploadServiceName.toUtf8() + "' id='step_02' to='romeo@montague.tld/garden' type='result'>"
                     "<query xmlns='http://jabber.org/protocol/disco#info'>"
                         "<identity category='store' type='file' name='HTTP File Upload' />"
@@ -218,32 +210,30 @@ void tst_QXmppUploadRequestManager::testSending()
     
     QXmppLogger* logger = new QXmppLogger();
     logger->setLoggingType(QXmppLogger::SignalLogging);
-    connect(logger, &QXmppLogger::message, [this, fileName, fileSize, fileType](QXmppLogger::MessageType type, const QString &text) {
+    
+    QMimeDatabase db;
+    QMimeType mimeType = db.mimeTypeForName(fileType);  
+    connect(logger, &QXmppLogger::message, [&](QXmppLogger::MessageType type, const QString &text) {
         QCOMPARE(type, QXmppLogger::SentMessage);
         
         QDomDocument doc;
         QCOMPARE(doc.setContent(text, true), true);
         QDomElement element = doc.documentElement();
         
-        QXmppIq iq;
+        QXmppHttpUploadRequestIq iq;
         iq.parse(element);
         
         QCOMPARE(iq.type(), QXmppIq::Get);
         QCOMPARE(iq.to(), uploadServiceName);
-        
-        QXmppElementList exts = iq.extensions();
-        QCOMPARE(exts.size(), 1);
-        QXmppElement elem = exts.first();
-        QCOMPARE(elem.tagName(), "request");
-        QCOMPARE(elem.attribute("filename"), fileName);
-        QCOMPARE(elem.attribute("size"), std::to_string(fileSize).c_str());
-        QCOMPARE(elem.attribute("content-type"), fileType);
+        QCOMPARE(iq.fileName(), fileName);
+        QCOMPARE(iq.size(), fileSize);
+        QCOMPARE(iq.contentType(), mimeType);
     });
-    client.setLogger(logger);
+    client.setLogger(logger);            
+    manager->requestUploadSlot(fileName, fileSize, mimeType);       
     
-    QMimeDatabase db;
-    QMimeType type = db.mimeTypeForName(fileType);              //I do not check the returning value of requestUploadSlot
-    manager->requestUploadSlot(fileName, fileSize, type);       //Because it doesn't get sent, client is not connected
+    //I do not check the returning value of requestUploadSlot
+    //Because it doesn't get sent, client is not connected
 }
 
 void tst_QXmppUploadRequestManager::testSending_data()
@@ -252,20 +242,24 @@ void tst_QXmppUploadRequestManager::testSending_data()
     QTest::addColumn<quint64>("fileSize");
     QTest::addColumn<QString>("fileType");
     
-    QTest::newRow("fileWithSizeBelowLimit") <<                  //there is no size above limit handling in request manager
-        "whatever.jpeg" << 698547ULL << "image/jpeg";           //there is also no code that selects an upload service with proper
-                                                                //size limit above requesting file size.
-    QTest::newRow("fileWithSizeAboveLimit") <<                  //Is it something to worry about?
+    QTest::newRow("fileWithSizeBelowLimit") <<                  
+        "whatever.jpeg" << 698547ULL << "image/jpeg";           
+                                                                
+    QTest::newRow("fileWithSizeAboveLimit") <<                  
         "some.pdf" << 65896498547ULL << "application/pdf";
+        
+    //there is no size above limit handling in request manager
+    //there is also no code that selects an upload service with proper
+    //size limit above requesting file size.
+    //Is it something to worry about?
 }
 
 void tst_QXmppUploadRequestManager::initTestCase()
 {
     uploadServiceName = "upload.montague.tld";
     maxFileSize = 500UL * 1024UL * 1024UL;
-    manager = new ManagerHeir();
-    discovery = new DiscoveryHeir();
-    client.insertExtension(0, discovery);
+    manager = new QXmppUploadRequestManager();
+    discovery = client.findExtension<QXmppDiscoveryManager>();
     client.addExtension(manager);
 }
 
@@ -289,11 +283,6 @@ void TestHelper::onSlotReceived(const QXmppHttpUploadSlotIq& slot)
 {
     event = true;
     error = false;
-}
-
-bool ManagerHeir::handleStanza(const QDomElement& stanza)
-{
-    return QXmppUploadRequestManager::handleStanza(stanza);
 }
 
 TestHelper::~TestHelper()
