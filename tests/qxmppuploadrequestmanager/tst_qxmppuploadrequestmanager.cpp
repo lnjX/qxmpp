@@ -52,6 +52,9 @@ private:
 class tst_QXmppUploadRequestManager : public QObject
 {
     Q_OBJECT
+protected slots:
+    void onLoggerMessage(QXmppLogger::MessageType type, const QString &text) const;
+    
 private slots:
     void initTestCase();
     
@@ -70,6 +73,10 @@ private:
     QXmppDiscoveryManager* discovery;
     QString uploadServiceName;
     quint64 maxFileSize;
+    
+    QMimeType lastMimeType;
+    QString lastFileName;
+    quint64 lastFileSize;
 };
 
 void tst_QXmppUploadRequestManager::testHandleStanza_data()
@@ -202,6 +209,24 @@ void tst_QXmppUploadRequestManager::testDiscoveryService_data()
     << true;
 }
 
+void tst_QXmppUploadRequestManager::onLoggerMessage(QXmppLogger::MessageType type, const QString& text) const
+{
+    QCOMPARE(type, QXmppLogger::SentMessage);
+    
+    QDomDocument doc;
+    QCOMPARE(doc.setContent(text, true), true);
+    QDomElement element = doc.documentElement();
+    
+    QXmppHttpUploadRequestIq iq;
+    iq.parse(element);
+    
+    QCOMPARE(iq.type(), QXmppIq::Get);
+    QCOMPARE(iq.to(), uploadServiceName);
+    QCOMPARE(iq.fileName(), lastFileName);
+    QCOMPARE(iq.size(), lastFileSize);
+    QCOMPARE(iq.contentType(), lastMimeType);
+}
+
 void tst_QXmppUploadRequestManager::testSending()
 {
     QFETCH(QString, fileName);
@@ -213,22 +238,12 @@ void tst_QXmppUploadRequestManager::testSending()
     
     QMimeDatabase db;
     QMimeType mimeType = db.mimeTypeForName(fileType);  
-    connect(logger, &QXmppLogger::message, [&](QXmppLogger::MessageType type, const QString &text) {
-        QCOMPARE(type, QXmppLogger::SentMessage);
-        
-        QDomDocument doc;
-        QCOMPARE(doc.setContent(text, true), true);
-        QDomElement element = doc.documentElement();
-        
-        QXmppHttpUploadRequestIq iq;
-        iq.parse(element);
-        
-        QCOMPARE(iq.type(), QXmppIq::Get);
-        QCOMPARE(iq.to(), uploadServiceName);
-        QCOMPARE(iq.fileName(), fileName);
-        QCOMPARE(iq.size(), fileSize);
-        QCOMPARE(iq.contentType(), mimeType);
-    });
+    connect(logger, &QXmppLogger::message, this, &tst_QXmppUploadRequestManager::onLoggerMessage);
+    
+    lastFileName = fileName;
+    lastFileSize = fileSize;
+    lastMimeType = mimeType;
+    
     client.setLogger(logger);            
     manager->requestUploadSlot(fileName, fileSize, mimeType);       
     
