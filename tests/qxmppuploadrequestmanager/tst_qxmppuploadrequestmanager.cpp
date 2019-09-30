@@ -76,7 +76,7 @@ private:
     
     QMimeType lastMimeType;
     QString lastFileName;
-    quint64 lastFileSize;
+    qint64 lastFileSize;
 };
 
 void tst_QXmppUploadRequestManager::testHandleStanza_data()
@@ -230,7 +230,7 @@ void tst_QXmppUploadRequestManager::onLoggerMessage(QXmppLogger::MessageType typ
 void tst_QXmppUploadRequestManager::testSending()
 {
     QFETCH(QString, fileName);
-    QFETCH(quint64, fileSize);
+    QFETCH(qint64, fileSize);
     QFETCH(QString, fileType);
     
     QXmppLogger* logger = new QXmppLogger();
@@ -254,14 +254,14 @@ void tst_QXmppUploadRequestManager::testSending()
 void tst_QXmppUploadRequestManager::testSending_data()
 {
     QTest::addColumn<QString>("fileName");
-    QTest::addColumn<quint64>("fileSize");
+    QTest::addColumn<qint64>("fileSize");
     QTest::addColumn<QString>("fileType");
     
     QTest::newRow("fileWithSizeBelowLimit") <<                  
-        "whatever.jpeg" << 698547ULL << "image/jpeg";           
+        "whatever.jpeg" << 698547LL << "image/jpeg";           
                                                                 
     QTest::newRow("fileWithSizeAboveLimit") <<                  
-        "some.pdf" << 65896498547ULL << "application/pdf";
+        "some.pdf" << 65896498547LL << "application/pdf";
         
     //there is no size above limit handling in request manager
     //there is also no code that selects an upload service with proper
