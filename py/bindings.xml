@@ -1,0 +1,226 @@
+<?xml version="1.0"?>
+<typesystem package="QXmpp">
+    <load-typesystem name="typesystem_core.xml" generate="no"/>
+    <load-typesystem name="typesystem_network.xml" generate="no"/>
+    <load-typesystem name="typesystem_xml.xml" generate="no"/>
+
+<!-- QXmpp base -->
+    <object-type name="QXmppArchiveChat"></object-type>
+    <object-type name="QXmppArchiveChatIq"></object-type>
+    <object-type name="QXmppArchiveListIq"></object-type>
+    <object-type name="QXmppArchiveMessage"></object-type>
+    <object-type name="QXmppArchivePrefIq"></object-type>
+    <object-type name="QXmppArchiveRemoveIq"></object-type>
+    <object-type name="QXmppArchiveRetrieveIq"></object-type>
+    <object-type name="QXmppBindIq"></object-type>
+    <object-type name="QXmppBookmarkConference"></object-type>
+    <object-type name="QXmppBookmarkSet"></object-type>
+    <object-type name="QXmppBookmarkUrl"></object-type>
+    <object-type name="QXmppByteStreamIq">
+        <enum-type name="Mode" />
+    </object-type>
+    <object-type name="QXmppByteStreamIq::StreamHost"></object-type>
+    <object-type name="QXmppDataForm">
+        <enum-type name="Type" />
+    </object-type>
+    <object-type name="QXmppDataForm::Field">
+        <enum-type name="Type" />
+    </object-type>
+    <object-type name="QXmppDataForm::MediaSource"></object-type>
+    <object-type name="QXmppDiscoveryIq">
+        <enum-type name="QueryType" />
+    </object-type>
+    <object-type name="QXmppDiscoveryIq::Identity"></object-type>
+    <object-type name="QXmppDiscoveryIq::Item"></object-type>
+    <object-type name="QXmppElement"></object-type>
+    <object-type name="QXmppEntityTimeIq"></object-type>
+    <object-type name="QXmppExtendedAddress"></object-type>
+    <object-type name="QXmppHttpUploadRequestIq"></object-type>
+    <object-type name="QXmppHttpUploadSlotIq"></object-type>
+    <object-type name="QXmppIbbIq"></object-type>
+    <object-type name="QXmppIceComponent"></object-type>
+    <object-type name="QXmppIceConnection">
+        <enum-type name="GatheringState" />
+    </object-type>
+    <object-type name="QXmppIceTransport"></object-type>
+    <object-type name="QXmppIq">
+        <enum-type name="Type" />
+    </object-type>
+    <object-type name="QXmppJingleCandidate">
+        <enum-type name="Type" />
+    </object-type>
+    <object-type name="QXmppJingleIq">
+        <enum-type name="Action" />
+    </object-type>
+    <object-type name="QXmppJingleIq::Content"></object-type>
+    <object-type name="QXmppJingleIq::Reason">
+        <enum-type name="Type" />
+    </object-type>
+    <object-type name="QXmppJinglePayloadType"></object-type>
+    <object-type name="QXmppLoggable"></object-type>
+    <object-type name="QXmppLogger">
+        <enum-type name="LoggingType" />
+        <enum-type name="MessageType" />
+    </object-type>
+    <object-type name="QXmppMessage">
+        <enum-type name="Type" />
+        <enum-type name="State" />
+        <enum-type name="Marker" />
+        <enum-type name="Hint" />
+        <enum-type name="EncryptionMethod" />
+    </object-type>
+    <object-type name="QXmppMixIq">
+        <enum-type name="Type" />
+    </object-type>
+    <object-type name="QXmppMixInfoItem"></object-type>
+    <object-type name="QXmppMixParticipantItem"></object-type>
+    <object-type name="QXmppMucAdminIq"></object-type>
+    <object-type name="QXmppMucItem">
+        <enum-type name="Affiliation" />
+        <enum-type name="Role" />
+    </object-type>
+    <object-type name="QXmppMucOwnerIq"></object-type>
+    <object-type name="QXmppNonSASLAuth"></object-type>
+    <object-type name="QXmppPingIq"></object-type>
+    <object-type name="QXmppPresence">
+        <enum-type name="Type" />
+        <enum-type name="AvailableStatusType" />
+        <enum-type name="VCardUpdateType" />
+    </object-type>
+    <object-type name="QXmppPubSubIq">
+        <enum-type name="QueryType" />
+    </object-type>
+    <object-type name="QXmppPubSubItem"></object-type>
+    <object-type name="QXmppRegisterIq"></object-type>
+    <object-type name="QXmppResultSet"></object-type>
+    <object-type name="QXmppResultSetQuery"></object-type>
+    <object-type name="QXmppResultSetReply"></object-type>
+    <object-type name="QXmppRosterIq"></object-type>
+    <object-type name="QXmppRosterIq::Item">
+        <enum-type name="SubscriptionType" />
+    </object-type>
+    <object-type name="QXmppRpcErrorIq"></object-type>
+    <object-type name="QXmppRpcInvokeIq"></object-type>
+    <object-type name="QXmppRpcMarshaller"></object-type>
+    <object-type name="QXmppRpcResponseIq"></object-type>
+<!--    <object-type name="QXmppRtcpPacket">
+        <enum-type name="Type" />
+    </object-type>-->
+<!--     <object-type name="QXmppRtcpReceiverReport"></object-type> -->
+    <object-type name="QXmppRtcpSenderInfo"></object-type>
+    <object-type name="QXmppRtcpSourceDescription"></object-type>
+    <object-type name="QXmppRtpAudioChannel">
+        <enum-type name="Tone" />
+    </object-type>
+    <object-type name="QXmppRtpChannel"></object-type>
+    <object-type name="QXmppRtpPacket">
+        <enum-type name="Type" />
+    </object-type>
+    <object-type name="QXmppRtpVideoChannel"></object-type>
+    <object-type name="QXmppSasl"></object-type>
+    <object-type name="QXmppSessionIq"></object-type>
+    <object-type name="QXmppSocksClient"></object-type>
+    <object-type name="QXmppSocksServer"></object-type>
+    <object-type name="QXmppStanza"></object-type>
+    <object-type name="QXmppStanza::Error">
+        <enum-type name="Condition" />
+        <enum-type name="Type" />
+    </object-type>
+    <object-type name="QXmppStream"></object-type>
+    <object-type name="QXmppStreamFeatures">
+        <enum-type name="Mode" />
+    </object-type>
+    <object-type name="QXmppStreamInitiationIq"></object-type>
+    <object-type name="QXmppStreamManagement">
+        <enum-type name="StreamSecurityMode" />
+        <enum-type name="NonSASLAuthMechanism" />
+    </object-type>
+<!--    <object-type name="QXmppStunMessage">
+        <enum-type name="MethodType" />
+        <enum-type name="ClassType" />
+    </object-type>-->
+    <object-type name="QXmppStunTransaction"></object-type>
+    <object-type name="QXmppTurnAllocation"></object-type>
+    <object-type name="QXmppUdpTransport"></object-type>
+    <object-type name="QXmppUtils"></object-type>
+    <object-type name="QXmppVCardAddress">
+        <enum-type name="TypeFlag" />
+    </object-type>
+    <object-type name="QXmppVCardEmail">
+        <enum-type name="TypeFlag" />
+    </object-type>
+    <object-type name="QXmppVCardIq"></object-type>
+    <object-type name="QXmppVCardOrganization"></object-type>
+    <object-type name="QXmppVCardPhone">
+        <enum-type name="TypeFlag" />
+    </object-type>
+    <object-type name="QXmppVersionIq"></object-type>
+    <object-type name="QXmppVideoFormat"></object-type>
+    <object-type name="QXmppVideoFrame">
+        <enum-type name="PixelFormat" />
+    </object-type>
+
+<!-- QXmpp client -->
+    <object-type name="QXmppArchiveManager"></object-type>
+    <object-type name="QXmppBookmarkManager"></object-type>
+    <object-type name="QXmppCall">
+        <enum-type name="Direction" />
+        <enum-type name="State" />
+    </object-type>
+    <object-type name="QXmppCallManager"></object-type>
+    <object-type name="QXmppCarbonManager"></object-type>
+    <object-type name="QXmppClient">
+        <enum-type name="Error" />
+        <enum-type name="State" />
+    </object-type>
+    <object-type name="QXmppClientExtension"></object-type>
+    <object-type name="QXmppConfiguration">
+        <enum-type name="StreamSecurityMode" />
+        <enum-type name="NonSASLAuthMechanism" />
+    </object-type>
+    <object-type name="QXmppDiscoveryManager"></object-type>
+    <object-type name="QXmppEntityTimeManager"></object-type>
+    <object-type name="QXmppInvokable"></object-type>
+    <object-type name="QXmppMamManager"></object-type>
+    <object-type name="QXmppMessageReceiptManager"></object-type>
+    <object-type name="QXmppMucManager"></object-type>
+    <object-type name="QXmppMucRoom">
+        <enum-type name="Action" />
+    </object-type>
+    <object-type name="QXmppOutgoingClient"></object-type>
+    <object-type name="QXmppRemoteMethod"></object-type>
+    <object-type name="QXmppRosterManager"></object-type>
+    <object-type name="QXmppRpcManager"></object-type>
+    <object-type name="QXmppTransferFileInfo"></object-type>
+    <object-type name="QXmppTransferJob">
+        <enum-type name="Direction" />
+        <enum-type name="Error" />
+        <enum-type name="Method" />
+        <enum-type name="State" />
+    </object-type>
+    <object-type name="QXmppTransferManager"></object-type>
+    <object-type name="QXmppUploadRequestManager"></object-type>
+    <object-type name="QXmppUploadService"></object-type>
+    <object-type name="QXmppVCardManager"></object-type>
+    <object-type name="QXmppVersionManager"></object-type>
+
+<!-- QXmpp server -->
+    <object-type name="QXmppDialback">
+        <enum-type name="Command" />
+    </object-type>
+    <object-type name="QXmppIncomingClient"></object-type>
+    <object-type name="QXmppIncomingServer"></object-type>
+    <object-type name="QXmppOutgoingServer"></object-type>
+    <object-type name="QXmppPasswordChecker"></object-type>
+    <object-type name="QXmppPasswordReply">
+        <enum-type name="Error" />
+    </object-type>
+    <object-type name="QXmppPasswordRequest">
+        <enum-type name="Type" />
+    </object-type>
+<!--     <object-type name="QXmppServer"></object-type> -->
+    <object-type name="QXmppServerExtension"></object-type>
+    <object-type name="QXmppServerPlugin"></object-type>
+    <object-type name="QXmppServerPluginInterface"></object-type>
+<!--     <object-type name="QXmppSslServer"></object-type> -->
+</typesystem>
