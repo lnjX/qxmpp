@@ -5,7 +5,7 @@
     <load-typesystem name="typesystem_xml.xml" generate="no"/>
 
 <!-- QXmpp base -->
-    <object-type name="QXmppArchiveChat"></object-type>
+<!--     <object-type name="QXmppArchiveChat"></object-type> -->
     <object-type name="QXmppArchiveChatIq"></object-type>
     <object-type name="QXmppArchiveListIq"></object-type>
     <object-type name="QXmppArchiveMessage"></object-type>
@@ -46,9 +46,9 @@
     <object-type name="QXmppIq">
         <enum-type name="Type" />
     </object-type>
-    <object-type name="QXmppJingleCandidate">
-        <enum-type name="Type" />
-    </object-type>
+<!--     <object-type name="QXmppJingleCandidate"> -->
+<!--         <enum-type name="Type" /> -->
+<!--     </object-type> -->
     <object-type name="QXmppJingleIq">
         <enum-type name="Action" />
     </object-type>
@@ -95,10 +95,10 @@
     <object-type name="QXmppResultSet"></object-type>
     <object-type name="QXmppResultSetQuery"></object-type>
     <object-type name="QXmppResultSetReply"></object-type>
-    <object-type name="QXmppRosterIq"></object-type>
-    <object-type name="QXmppRosterIq::Item">
+<!--     <object-type name="QXmppRosterIq"></object-type> -->
+<!--    <object-type name="QXmppRosterIq::Item">
         <enum-type name="SubscriptionType" />
-    </object-type>
+    </object-type>-->
     <object-type name="QXmppRpcErrorIq"></object-type>
     <object-type name="QXmppRpcInvokeIq"></object-type>
     <object-type name="QXmppRpcMarshaller"></object-type>
@@ -161,7 +161,7 @@
     </object-type>
 
 <!-- QXmpp client -->
-    <object-type name="QXmppArchiveManager"></object-type>
+<!--     <object-type name="QXmppArchiveManager"></object-type> -->
     <object-type name="QXmppBookmarkManager"></object-type>
     <object-type name="QXmppCall">
         <enum-type name="Direction" />
@@ -169,27 +169,27 @@
     </object-type>
     <object-type name="QXmppCallManager"></object-type>
     <object-type name="QXmppCarbonManager"></object-type>
-    <object-type name="QXmppClient">
-        <enum-type name="Error" />
-        <enum-type name="State" />
-    </object-type>
+<!--     <object-type name="QXmppClient"> -->
+<!--         <enum-type name="Error" /> -->
+<!--         <enum-type name="State" /> -->
+<!--     </object-type> -->
     <object-type name="QXmppClientExtension"></object-type>
-    <object-type name="QXmppConfiguration">
-        <enum-type name="StreamSecurityMode" />
-        <enum-type name="NonSASLAuthMechanism" />
-    </object-type>
+<!--     <object-type name="QXmppConfiguration"> -->
+<!--         <enum-type name="StreamSecurityMode" /> -->
+<!--         <enum-type name="NonSASLAuthMechanism" /> -->
+<!--     </object-type> -->
     <object-type name="QXmppDiscoveryManager"></object-type>
     <object-type name="QXmppEntityTimeManager"></object-type>
     <object-type name="QXmppInvokable"></object-type>
-    <object-type name="QXmppMamManager"></object-type>
+<!--     <object-type name="QXmppMamManager"></object-type> -->
     <object-type name="QXmppMessageReceiptManager"></object-type>
     <object-type name="QXmppMucManager"></object-type>
     <object-type name="QXmppMucRoom">
         <enum-type name="Action" />
     </object-type>
-    <object-type name="QXmppOutgoingClient"></object-type>
+<!--     <object-type name="QXmppOutgoingClient"></object-type> -->
     <object-type name="QXmppRemoteMethod"></object-type>
-    <object-type name="QXmppRosterManager"></object-type>
+<!--     <object-type name="QXmppRosterManager"></object-type> -->
     <object-type name="QXmppRpcManager"></object-type>
     <object-type name="QXmppTransferFileInfo"></object-type>
     <object-type name="QXmppTransferJob">
@@ -199,7 +199,7 @@
         <enum-type name="State" />
     </object-type>
     <object-type name="QXmppTransferManager"></object-type>
-    <object-type name="QXmppUploadRequestManager"></object-type>
+<!--     <object-type name="QXmppUploadRequestManager"></object-type> -->
     <object-type name="QXmppUploadService"></object-type>
     <object-type name="QXmppVCardManager"></object-type>
     <object-type name="QXmppVersionManager"></object-type>
@@ -210,7 +210,7 @@
     </object-type>
     <object-type name="QXmppIncomingClient"></object-type>
     <object-type name="QXmppIncomingServer"></object-type>
-    <object-type name="QXmppOutgoingServer"></object-type>
+<!--     <object-type name="QXmppOutgoingServer"></object-type> -->
     <object-type name="QXmppPasswordChecker"></object-type>
     <object-type name="QXmppPasswordReply">
         <enum-type name="Error" />
