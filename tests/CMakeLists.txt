@@ -46,6 +46,7 @@ add_simple_test(qxmppsocks)
 add_simple_test(qxmppstanza)
 add_simple_test(qxmppstreamfeatures)
 add_simple_test(qxmppstunmessage)
+add_simple_test(qxmppuri)
 add_simple_test(qxmppvcardiq)
 add_simple_test(qxmppversioniq)
 
