@@ -21,30 +21,37 @@
  *
  */
 
+#include "QXmppTlsManager_p.h"
+
 #include "QXmppClient.h"
 #include "QXmppClient_p.h"
 #include "QXmppConstants_p.h"
 #include "QXmppOutgoingClient.h"
 #include "QXmppStartTlsPacket.h"
 #include "QXmppStreamFeatures.h"
-#include "QXmppTlsManager_p.h"
+#ifdef QXMPP_TCP_SOCKETS_ENABLED
+#include "QXmppTcpSocket_p.h"
+#endif
 
 #include <QDomElement>
-#include <QSslSocket>
 
 /// \cond
 QXmppTlsManager::QXmppTlsManager() = default;
 
 bool QXmppTlsManager::handleStanza(const QDomElement &stanza)
 {
-    if (QXmppStreamFeatures::isStreamFeatures(stanza) && !clientStream()->socket()->isEncrypted()) {
+#ifdef QXMPP_TCP_SOCKETS_ENABLED
+    auto *socket = dynamic_cast<QXmppTcpSocket*>(clientStream()->socket());
+
+    if (socket && !socket->isEncrypted() && QXmppStreamFeatures::isStreamFeatures(stanza)) {
         QXmppStreamFeatures features;
         features.parse(stanza);
 
         // determine TLS mode to use
         const QXmppConfiguration::StreamSecurityMode localSecurity = client()->configuration().streamSecurityMode();
         const QXmppStreamFeatures::Mode remoteSecurity = features.tlsMode();
-        if (!clientStream()->socket()->supportsSsl() &&
+
+        if (socket->supportsEncryption() &&
             (localSecurity == QXmppConfiguration::TLSRequired ||
              remoteSecurity == QXmppStreamFeatures::Required)) {
             warning("Disconnecting since TLS is required, but SSL support is not available");
@@ -58,7 +65,7 @@ bool QXmppTlsManager::handleStanza(const QDomElement &stanza)
             return true;
         }
 
-        if (clientStream()->socket()->supportsSsl() &&
+        if (socket->supportsEncryption() &&
             localSecurity != QXmppConfiguration::TLSDisabled &&
             remoteSecurity != QXmppStreamFeatures::Disabled) {
             // enable TLS since it is supported by both parties
@@ -67,11 +74,12 @@ bool QXmppTlsManager::handleStanza(const QDomElement &stanza)
         }
     }
 
-    if (QXmppStartTlsPacket::isStartTlsPacket(stanza, QXmppStartTlsPacket::Proceed)) {
+    if (socket && QXmppStartTlsPacket::isStartTlsPacket(stanza, QXmppStartTlsPacket::Proceed)) {
         debug("Starting encryption");
-        clientStream()->socket()->startClientEncryption();
+        socket->startClientEncryption();
         return true;
     }
+#endif
 
     return false;
 }

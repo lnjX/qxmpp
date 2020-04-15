@@ -32,8 +32,10 @@
 #include "QXmppNonSASLAuth.h"
 #include "QXmppPresence.h"
 #include "QXmppSasl_p.h"
+#include "QXmppSocket.h"
 #include "QXmppStreamFeatures.h"
 #include "QXmppStreamManagement_p.h"
+#include "QXmppTcpSocket_p.h"
 #include "QXmppUtils.h"
 
 #include <QCryptographicHash>
@@ -144,11 +146,12 @@ void QXmppOutgoingClientPrivate::connectToHost(const QString &host, quint16 port
     // connect to host
     const QXmppConfiguration::StreamSecurityMode localSecurity = q->configuration().streamSecurityMode();
     if (localSecurity == QXmppConfiguration::LegacySSL) {
-        if (!q->socket()->supportsSsl()) {
+        if (!q->socket()->supportsEncryption()) {
             q->warning("Not connecting as legacy SSL was requested, but SSL support is not available");
             return;
         }
-        q->socket()->connectToHostEncrypted(host, port);
+        // FIXME:SOCKETS:TLS
+//        q->socket()->connectToHostEncrypted(host, port);
     } else {
         q->socket()->connectToHost(host, port);
     }
@@ -171,12 +174,12 @@ QXmppOutgoingClient::QXmppOutgoingClient(QObject *parent)
       d(new QXmppOutgoingClientPrivate(this))
 {
     // initialise socket
-    auto *socket = new QSslSocket(this);
+    auto *socket = new QXmppTcpSocket(this);
     setSocket(socket);
 
-    connect(socket, &QAbstractSocket::disconnected, this, &QXmppOutgoingClient::_q_socketDisconnected);
-    connect(socket, QOverload<const QList<QSslError> &>::of(&QSslSocket::sslErrors), this, &QXmppOutgoingClient::socketSslErrors);
-    connect(socket, QOverload<QAbstractSocket::SocketError>::of(&QSslSocket::error), this, &QXmppOutgoingClient::socketError);
+    connect(socket, &QXmppSocket::disconnected, this, &QXmppOutgoingClient::_q_socketDisconnected);
+    connect(socket, &QXmppSocket::sslErrors, this, &QXmppOutgoingClient::socketSslErrors);
+    connect(socket, &QXmppSocket::errorOccured, this, &QXmppOutgoingClient::socketError);
 
     // DNS lookups
     connect(&d->dns, &QDnsLookup::finished, this, &QXmppOutgoingClient::_q_dnsLookupFinished);

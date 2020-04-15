@@ -29,11 +29,13 @@
 #include "QXmppStartTlsPacket.h"
 #include "QXmppStreamFeatures.h"
 #include "QXmppUtils.h"
+#include "QXmppTcpSocket_p.h"
 
 #include <QDomElement>
 #include <QHostAddress>
+#include <QSslCertificate>
+#include <QSslConfiguration>
 #include <QSslKey>
-#include <QSslSocket>
 
 class QXmppIncomingServerPrivate
 {
@@ -56,7 +58,7 @@ QXmppIncomingServerPrivate::QXmppIncomingServerPrivate(QXmppIncomingServer *qq)
 
 QString QXmppIncomingServerPrivate::origin() const
 {
-    QSslSocket *socket = q->socket();
+    auto *socket = q->socket();
     if (socket)
         return socket->peerAddress().toString() + " " + QString::number(socket->peerPort());
     else
@@ -70,7 +72,7 @@ QString QXmppIncomingServerPrivate::origin() const
 /// \param parent The parent QObject for the stream (optional).
 ///
 
-QXmppIncomingServer::QXmppIncomingServer(QSslSocket *socket, const QString &domain, QObject *parent)
+QXmppIncomingServer::QXmppIncomingServer(QXmppSocket *socket, const QString &domain, QObject *parent)
     : QXmppStream(parent)
 {
 
@@ -78,7 +80,7 @@ QXmppIncomingServer::QXmppIncomingServer(QSslSocket *socket, const QString &doma
     d->domain = domain;
 
     if (socket) {
-        connect(socket, &QAbstractSocket::disconnected,
+        connect(socket, &QXmppSocket::disconnected,
                 this, &QXmppIncomingServer::slotSocketDisconnected);
 
         setSocket(socket);
@@ -119,12 +121,16 @@ void QXmppIncomingServer::handleStream(const QDomElement &streamElement)
                            ns_server_dialback,
                            ns_stream,
                            d->localStreamId);
-    sendData(data.toUtf8());
+    sendData(data);
 
     // send stream features
     QXmppStreamFeatures features;
-    if (!socket()->isEncrypted() && !socket()->localCertificate().isNull() && !socket()->privateKey().isNull())
+    if (!socket()->isEncrypted() &&
+            socket()->supportsEncryption() &&
+            !socket()->sslConfiguration().localCertificate().isNull() &&
+            !socket()->sslConfiguration().privateKey().isNull()) {
         features.setTlsMode(QXmppStreamFeatures::Enabled);
+    }
     sendPacket(features);
 }
 
@@ -135,7 +141,7 @@ void QXmppIncomingServer::handleStanza(const QDomElement &stanza)
     if (QXmppStartTlsPacket::isStartTlsPacket(stanza, QXmppStartTlsPacket::StartTls)) {
         sendPacket(QXmppStartTlsPacket(QXmppStartTlsPacket::Proceed));
         socket()->flush();
-        socket()->startServerEncryption();
+        static_cast<QXmppTcpSocket*>(socket())->startServerEncryption();
         return;
     } else if (QXmppDialback::isDialback(stanza)) {
         QXmppDialback request;

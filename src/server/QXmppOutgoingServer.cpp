@@ -25,8 +25,10 @@
 
 #include "QXmppConstants_p.h"
 #include "QXmppDialback.h"
+#include "QXmppSocket.h"
 #include "QXmppStartTlsPacket.h"
 #include "QXmppStreamFeatures.h"
+#include "QXmppTcpSocket_p.h"
 #include "QXmppUtils.h"
 
 #include <QDnsLookup>
@@ -34,7 +36,6 @@
 #include <QList>
 #include <QSslError>
 #include <QSslKey>
-#include <QSslSocket>
 #include <QTimer>
 
 class QXmppOutgoingServerPrivate
@@ -62,11 +63,11 @@ QXmppOutgoingServer::QXmppOutgoingServer(const QString &domain, QObject *parent)
       d(new QXmppOutgoingServerPrivate)
 {
     // socket initialisation
-    auto *socket = new QSslSocket(this);
+    auto *socket = new QXmppTcpSocket(this);
     setSocket(socket);
 
-    connect(socket, &QAbstractSocket::disconnected, this, &QXmppOutgoingServer::_q_socketDisconnected);
-    connect(socket, QOverload<QAbstractSocket::SocketError>::of(&QSslSocket::error), this, &QXmppOutgoingServer::socketError);
+    connect(socket, &QXmppSocket::disconnected, this, &QXmppOutgoingServer::_q_socketDisconnected);
+    connect(socket, &QXmppSocket::errorOccured, this, &QXmppOutgoingServer::socketError);
 
     // DNS lookups
     connect(&d->dns, &QDnsLookup::finished, this, &QXmppOutgoingServer::_q_dnsLookupFinished);
@@ -79,7 +80,7 @@ QXmppOutgoingServer::QXmppOutgoingServer(const QString &domain, QObject *parent)
     d->localDomain = domain;
     d->ready = false;
 
-    connect(socket, QOverload<const QList<QSslError> &>::of(&QSslSocket::sslErrors), this, &QXmppOutgoingServer::slotSslErrors);
+    connect(socket, &QXmppTcpSocket::sslErrors, this, &QXmppOutgoingServer::slotSslErrors);
 }
 
 /// Destroys the stream.
@@ -171,7 +172,7 @@ void QXmppOutgoingServer::handleStanza(const QDomElement &stanza)
 
         if (!socket()->isEncrypted()) {
             // check we can satisfy TLS constraints
-            if (!socket()->supportsSsl() &&
+            if (!socket()->supportsEncryption() &&
                 features.tlsMode() == QXmppStreamFeatures::Required) {
                 warning("Disconnecting as TLS is required, but SSL support is not available");
                 disconnectFromHost();
@@ -179,7 +180,7 @@ void QXmppOutgoingServer::handleStanza(const QDomElement &stanza)
             }
 
             // enable TLS if possible
-            if (socket()->supportsSsl() &&
+            if (socket()->supportsEncryption() &&
                 features.tlsMode() != QXmppStreamFeatures::Disabled) {
                 sendPacket(QXmppStartTlsPacket(QXmppStartTlsPacket::StartTls));
                 return;
@@ -191,7 +192,7 @@ void QXmppOutgoingServer::handleStanza(const QDomElement &stanza)
         sendDialback();
     } else if (QXmppStartTlsPacket::isStartTlsPacket(stanza, QXmppStartTlsPacket::Proceed)) {
         debug("Starting encryption");
-        socket()->startClientEncryption();
+        static_cast<QXmppTcpSocket*>(socket())->startClientEncryption();
         return;
     } else if (QXmppDialback::isDialback(stanza)) {
         QXmppDialback response;

@@ -32,6 +32,7 @@
 #include "QXmppPresence.h"
 #include "QXmppServerExtension.h"
 #include "QXmppServerPlugin.h"
+#include "QXmppTcpSocket_p.h"
 #include "QXmppUtils.h"
 
 #include <QCoreApplication>
@@ -39,8 +40,8 @@
 #include <QFileInfo>
 #include <QPluginLoader>
 #include <QSslCertificate>
+#include <QSslConfiguration>
 #include <QSslKey>
-#include <QSslSocket>
 
 static void helperToXmlAddDomElement(QXmlStreamWriter *stream, const QDomElement &element, const QStringList &omitNamespaces)
 {
@@ -534,9 +535,6 @@ void QXmppServer::setPrivateKey(const QSslKey &key)
 
 bool QXmppServer::listenForClients(const QHostAddress &address, quint16 port)
 {
-    bool check;
-    Q_UNUSED(check)
-
     if (d->domain.isEmpty()) {
         d->warning("No domain was specified!");
         return false;
@@ -548,9 +546,8 @@ bool QXmppServer::listenForClients(const QHostAddress &address, quint16 port)
     server->setLocalCertificate(d->localCertificate);
     server->setPrivateKey(d->privateKey);
 
-    check = connect(server, SIGNAL(newConnection(QSslSocket *)),
-                    this, SLOT(_q_clientConnection(QSslSocket *)));
-    Q_ASSERT(check);
+    connect(server, &QXmppSslServer::newConnection,
+            this, &QXmppServer::_q_clientConnection);
 
     if (!server->listen(address, port)) {
         d->warning(QString("Could not start listening for C2S on %1 %2").arg(address.toString(), QString::number(port)));
@@ -688,7 +685,7 @@ void QXmppServer::addIncomingClient(QXmppIncomingClient *stream)
 ///
 /// \param socket
 
-void QXmppServer::_q_clientConnection(QSslSocket *socket)
+void QXmppServer::_q_clientConnection(QXmppSocket *socket)
 {
     // check the socket didn't die since the signal was emitted
     if (socket->state() != QAbstractSocket::ConnectedState) {
@@ -717,7 +714,12 @@ void QXmppServer::_q_clientConnected()
     // check whether the connection conflicts with another one
     QXmppIncomingClient *old = d->incomingClientsByJid.value(jid);
     if (old && old != client) {
-        old->sendData("<stream:error><conflict xmlns='urn:ietf:params:xml:ns:xmpp-streams'/><text xmlns='urn:ietf:params:xml:ns:xmpp-streams'>Replaced by new connection</text></stream:error>");
+        old->sendData(QStringLiteral("<stream:error>"
+                                     "<conflict xmlns='urn:ietf:params:xml:ns:xmpp-streams'/>"
+                                     "<text xmlns='urn:ietf:params:xml:ns:xmpp-streams'>"
+                                     "Replaced by new connection"
+                                     "</text>"
+                                     "</stream:error>"));
         old->disconnectFromHost();
     }
     d->incomingClientsByJid.insert(jid, client);
@@ -811,9 +813,8 @@ void QXmppServer::_q_outgoingServerDisconnected()
 ///
 /// \param socket
 
-void QXmppServer::_q_serverConnection(QSslSocket *socket)
+void QXmppServer::_q_serverConnection(QXmppSocket *socket)
 {
-
     // check the socket didn't die since the signal was emitted
     if (socket->state() != QAbstractSocket::ConnectedState) {
         delete socket;
@@ -879,17 +880,19 @@ QXmppSslServer::~QXmppSslServer()
 
 void QXmppSslServer::incomingConnection(qintptr socketDescriptor)
 {
-    auto *socket = new QSslSocket;
+    auto *socket = new QXmppTcpSocket;
     if (!socket->setSocketDescriptor(socketDescriptor)) {
         delete socket;
         return;
     }
 
     if (!d->localCertificate.isNull() && !d->privateKey.isNull()) {
-        socket->setProtocol(QSsl::AnyProtocol);
-        socket->addCaCertificates(d->caCertificates);
-        socket->setLocalCertificate(d->localCertificate);
-        socket->setPrivateKey(d->privateKey);
+        QSslConfiguration config;
+        config.setProtocol(QSsl::AnyProtocol);
+        config.setCaCertificates(d->caCertificates);
+        config.setLocalCertificate(d->localCertificate);
+        config.setPrivateKey(d->privateKey);
+        socket->setSslConfiguration(config);
     }
     emit newConnection(socket);
 }

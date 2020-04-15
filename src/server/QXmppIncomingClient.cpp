@@ -31,12 +31,14 @@
 #include "QXmppSessionIq.h"
 #include "QXmppStartTlsPacket.h"
 #include "QXmppStreamFeatures.h"
+#include "QXmppTcpSocket_p.h"
 #include "QXmppUtils.h"
 
 #include <QDomElement>
 #include <QHostAddress>
 #include <QSslKey>
-#include <QSslSocket>
+#include <QSslCertificate>
+#include <QSslConfiguration>
 #include <QTimer>
 
 class QXmppIncomingClientPrivate
@@ -88,11 +90,11 @@ void QXmppIncomingClientPrivate::checkCredentials(const QByteArray &response)
 
 QString QXmppIncomingClientPrivate::origin() const
 {
-    QSslSocket *socket = q->socket();
+    auto *socket = q->socket();
     if (socket)
         return socket->peerAddress().toString() + " " + QString::number(socket->peerPort());
     else
-        return "<unknown>";
+        return QStringLiteral("<unknown>");
 }
 
 /// Constructs a new incoming client stream.
@@ -102,7 +104,7 @@ QString QXmppIncomingClientPrivate::origin() const
 /// \param parent The parent QObject for the stream (optional).
 ///
 
-QXmppIncomingClient::QXmppIncomingClient(QSslSocket *socket, const QString &domain, QObject *parent)
+QXmppIncomingClient::QXmppIncomingClient(QXmppSocket *socket, const QString &domain, QObject *parent)
     : QXmppStream(parent)
 {
 
@@ -110,7 +112,7 @@ QXmppIncomingClient::QXmppIncomingClient(QSslSocket *socket, const QString &doma
     d->domain = domain;
 
     if (socket) {
-        connect(socket, &QAbstractSocket::disconnected,
+        connect(socket, &QXmppSocket::disconnected,
                 this, &QXmppIncomingClient::onSocketDisconnected);
 
         setSocket(socket);
@@ -193,7 +195,7 @@ void QXmppIncomingClient::handleStream(const QDomElement &streamElement)
                                ns_stream,
                                sessionId,
                                d->domain.toLatin1());
-    sendData(response.toUtf8());
+    sendData(response);
 
     // check requested domain
     if (streamElement.attribute("to") != d->domain) {
@@ -204,15 +206,20 @@ void QXmppIncomingClient::handleStream(const QDomElement &streamElement)
                                    "</text>"
                                    "</stream:error>")
                                .arg(streamElement.attribute("to"));
-        sendData(response.toUtf8());
+        sendData(response);
         disconnectFromHost();
         return;
     }
 
     // send stream features
     QXmppStreamFeatures features;
-    if (socket() && !socket()->isEncrypted() && !socket()->localCertificate().isNull() && !socket()->privateKey().isNull())
+    if (!socket()->isEncrypted() &&
+            socket()->supportsEncryption() &&
+            !socket()->sslConfiguration().localCertificate().isNull() &&
+            !socket()->sslConfiguration().privateKey().isNull()) {
         features.setTlsMode(QXmppStreamFeatures::Enabled);
+    }
+
     if (!d->jid.isEmpty()) {
         features.setBindMode(QXmppStreamFeatures::Required);
         features.setSessionMode(QXmppStreamFeatures::Enabled);
@@ -236,7 +243,7 @@ void QXmppIncomingClient::handleStanza(const QDomElement &nodeRecv)
     if (QXmppStartTlsPacket::isStartTlsPacket(nodeRecv, QXmppStartTlsPacket::StartTls)) {
         sendPacket(QXmppStartTlsPacket(QXmppStartTlsPacket::Proceed));
         socket()->flush();
-        socket()->startServerEncryption();
+        static_cast<QXmppTcpSocket*>(socket())->startServerEncryption();
         return;
     } else if (ns == ns_sasl) {
         if (!d->passwordChecker) {

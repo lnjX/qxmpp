@@ -41,7 +41,7 @@ class QXMPP_EXPORT QXmppIncomingClient : public QXmppStream
     Q_OBJECT
 
 public:
-    QXmppIncomingClient(QSslSocket *socket, const QString &domain, QObject *parent = nullptr);
+    QXmppIncomingClient(QXmppSocket *socket, const QString &domain, QObject *parent = nullptr);
     ~QXmppIncomingClient() override;
 
     bool isConnected() const override;

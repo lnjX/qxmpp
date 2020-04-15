@@ -26,6 +26,7 @@
 
 #include "QXmppConstants_p.h"
 #include "QXmppLogger.h"
+#include "QXmppSocket.h"
 #include "QXmppStanza.h"
 #include "QXmppStreamManagement_p.h"
 #include "QXmppUtils.h"
@@ -35,7 +36,6 @@
 #include <QHostAddress>
 #include <QMap>
 #include <QRegExp>
-#include <QSslSocket>
 #include <QStringList>
 #include <QTime>
 #include <QXmlStreamWriter>
@@ -50,14 +50,14 @@ class QXmppStreamPrivate
 public:
     QXmppStreamPrivate();
 
-    QByteArray dataBuffer;
-    QSslSocket *socket;
+    QString dataBuffer;
+    QXmppSocket *socket;
 
     // incoming stream state
     QByteArray streamStart;
 
     bool streamManagementEnabled;
-    QMap<unsigned, QByteArray> unacknowledgedStanzas;
+    QMap<unsigned int, QString> unacknowledgedStanzas;
     unsigned lastOutgoingSequenceNumber;
     unsigned lastIncomingSequenceNumber;
 };
@@ -139,10 +139,17 @@ bool QXmppStream::isConnected() const
 ///
 bool QXmppStream::sendData(const QByteArray &data)
 {
-    logSent(QString::fromUtf8(data));
+    return sendData(QString::fromUtf8(data));
+}
+
+bool QXmppStream::sendData(const QString &text)
+{
+    logSent(text);
+
     if (!d->socket || d->socket->state() != QAbstractSocket::ConnectedState)
         return false;
-    return d->socket->write(data) == data.size();
+
+    return d->socket->sendTextMessage(text);
 }
 
 ///
@@ -153,16 +160,16 @@ bool QXmppStream::sendData(const QByteArray &data)
 bool QXmppStream::sendPacket(const QXmppStanza &packet)
 {
     // prepare packet
-    QByteArray data;
-    QXmlStreamWriter xmlStream(&data);
+    QString text;
+    QXmlStreamWriter xmlStream(&text);
     packet.toXml(&xmlStream);
 
     bool isXmppStanza = packet.isXmppStanza();
     if (isXmppStanza && d->streamManagementEnabled)
-        d->unacknowledgedStanzas[++d->lastOutgoingSequenceNumber] = data;
+        d->unacknowledgedStanzas[++d->lastOutgoingSequenceNumber] = text;
 
     // send packet
-    bool success = sendData(data);
+    bool success = sendData(text);
     if (isXmppStanza)
         sendAcknowledgementRequest();
     return success;
@@ -171,7 +178,7 @@ bool QXmppStream::sendPacket(const QXmppStanza &packet)
 ///
 /// Returns the QSslSocket used for this stream.
 ///
-QSslSocket *QXmppStream::socket() const
+QXmppSocket *QXmppStream::socket() const
 {
     return d->socket;
 }
@@ -179,17 +186,17 @@ QSslSocket *QXmppStream::socket() const
 ///
 /// Sets the QSslSocket used for this stream.
 ///
-void QXmppStream::setSocket(QSslSocket *socket)
+void QXmppStream::setSocket(QXmppSocket *socket)
 {
     d->socket = socket;
     if (!d->socket)
         return;
 
     // socket events
-    connect(socket, &QAbstractSocket::connected, this, &QXmppStream::_q_socketConnected);
-    connect(socket, &QSslSocket::encrypted, this, &QXmppStream::_q_socketEncrypted);
-    connect(socket, QOverload<QAbstractSocket::SocketError>::of(&QSslSocket::error), this, &QXmppStream::_q_socketError);
-    connect(socket, &QIODevice::readyRead, this, &QXmppStream::_q_socketReadyRead);
+    connect(socket, &QXmppSocket::connected, this, &QXmppStream::_q_socketConnected);
+    connect(socket, &QXmppSocket::encryptionStarted, this, &QXmppStream::_q_socketEncrypted);
+    connect(socket, &QXmppSocket::errorOccured, this, &QXmppStream::_q_socketError);
+    connect(socket, &QXmppSocket::textMessageReceived, this, &QXmppStream::handleTextMessageReceived);
 }
 
 void QXmppStream::_q_socketConnected()
@@ -210,14 +217,15 @@ void QXmppStream::_q_socketError(QAbstractSocket::SocketError socketError)
     warning(QStringLiteral("Socket error: ") + socket()->errorString());
 }
 
-void QXmppStream::_q_socketReadyRead()
+void QXmppStream::handleTextMessageReceived(const QString &text)
 {
-    d->dataBuffer.append(d->socket->readAll());
+    d->dataBuffer.append(text);
 
     // handle whitespace pings
     if (!d->dataBuffer.isEmpty() && d->dataBuffer.trimmed().isEmpty()) {
         d->dataBuffer.clear();
         handleStanza(QDomElement());
+        return;
     }
 
     // FIXME : maybe these QRegExps could be static?
@@ -230,15 +238,14 @@ void QXmppStream::_q_socketReadyRead()
     //
     // NOTE: as we may only have partial XML content, do not alter the stream's
     // state until we have a valid XML document!
-    QByteArray completeXml = d->dataBuffer;
-    const QString strData = QString::fromUtf8(d->dataBuffer);
+    QString completeXml = d->dataBuffer;
     bool streamStart = false;
-    if (d->streamStart.isEmpty() && strData.contains(startStreamRegex))
+    if (d->streamStart.isEmpty() && d->dataBuffer.contains(startStreamRegex))
         streamStart = true;
     else
         completeXml.prepend(d->streamStart);
     bool streamEnd = false;
-    if (strData.contains(endStreamRegex))
+    if (d->dataBuffer.contains(endStreamRegex))
         streamEnd = true;
     else
         completeXml.append(streamRootElementEnd);
@@ -249,7 +256,7 @@ void QXmppStream::_q_socketReadyRead()
         return;
 
     // remove data from buffer
-    logReceived(strData);
+    logReceived(text);
     d->dataBuffer.clear();
 
     // process stream start
@@ -298,9 +305,9 @@ void QXmppStream::enableStreamManagement(bool resetSequenceNumber)
 
         // resend unacked stanzas
         if (!d->unacknowledgedStanzas.empty()) {
-            QMap<unsigned, QByteArray> oldUnackedStanzas = d->unacknowledgedStanzas;
+            QMap<unsigned, QString> oldUnackedStanzas = d->unacknowledgedStanzas;
             d->unacknowledgedStanzas.clear();
-            for (QMap<unsigned, QByteArray>::iterator it = oldUnackedStanzas.begin(); it != oldUnackedStanzas.end(); ++it) {
+            for (QMap<unsigned int, QString>::iterator it = oldUnackedStanzas.begin(); it != oldUnackedStanzas.end(); ++it) {
                 d->unacknowledgedStanzas[++d->lastOutgoingSequenceNumber] = it.value();
                 sendData(it.value());
             }
@@ -309,7 +316,7 @@ void QXmppStream::enableStreamManagement(bool resetSequenceNumber)
     } else {
         // resend unacked stanzas
         if (!d->unacknowledgedStanzas.empty()) {
-            for (QMap<unsigned, QByteArray>::iterator it = d->unacknowledgedStanzas.begin(); it != d->unacknowledgedStanzas.end(); ++it)
+            for (QMap<unsigned int, QString>::iterator it = d->unacknowledgedStanzas.begin(); it != d->unacknowledgedStanzas.end(); ++it)
                 sendData(it.value());
             sendAcknowledgementRequest();
         }
@@ -334,7 +341,7 @@ unsigned QXmppStream::lastIncomingSequenceNumber() const
 ///
 void QXmppStream::setAcknowledgedSequenceNumber(unsigned sequenceNumber)
 {
-    for (QMap<unsigned, QByteArray>::iterator it = d->unacknowledgedStanzas.begin(); it != d->unacknowledgedStanzas.end();) {
+    for (QMap<unsigned int, QString>::iterator it = d->unacknowledgedStanzas.begin(); it != d->unacknowledgedStanzas.end();) {
         if (it.key() <= sequenceNumber)
             it = d->unacknowledgedStanzas.erase(it);
         else

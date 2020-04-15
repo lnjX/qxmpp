@@ -34,6 +34,7 @@ class QDomElement;
 class QSslSocket;
 class QXmppStanza;
 class QXmppStreamPrivate;
+class QXmppSocket;
 
 /// \brief The QXmppStream class is the base class for all XMPP streams.
 ///
@@ -58,8 +59,8 @@ Q_SIGNALS:
 
 protected:
     // Access to underlying socket
-    QSslSocket *socket() const;
-    void setSocket(QSslSocket *socket);
+    QXmppSocket *socket() const;
+    void setSocket(QXmppSocket *socket);
 
     // Overridable methods
     virtual void handleStart();
@@ -87,13 +88,15 @@ private:
 
 public Q_SLOTS:
     virtual void disconnectFromHost();
+    // ### remove sendData(QByteArray)
     virtual bool sendData(const QByteArray &);
+    virtual bool sendData(const QString &);
 
 private Q_SLOTS:
     void _q_socketConnected();
     void _q_socketEncrypted();
     void _q_socketError(QAbstractSocket::SocketError error);
-    void _q_socketReadyRead();
+    void handleTextMessageReceived(const QString &text);
 
 private:
     QXmppStreamPrivate *const d;

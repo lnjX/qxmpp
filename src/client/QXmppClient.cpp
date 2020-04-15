@@ -33,12 +33,12 @@
 #include "QXmppMessage.h"
 #include "QXmppOutgoingClient.h"
 #include "QXmppRosterManager.h"
+#include "QXmppSocket.h"
 #include "QXmppTlsManager_p.h"
 #include "QXmppUtils.h"
 #include "QXmppVCardManager.h"
 #include "QXmppVersionManager.h"
 
-#include <QSslSocket>
 #include <QTimer>
 
 /// \cond
@@ -135,7 +135,7 @@ QXmppClient::QXmppClient(QObject* parent)
     connect(d->stream, &QXmppOutgoingClient::sslErrors,
             this, &QXmppClient::sslErrors);
 
-    connect(d->stream->socket(), &QAbstractSocket::stateChanged,
+    connect(d->stream->socket(), &QXmppSocket::stateChanged,
             this, &QXmppClient::_q_socketStateChanged);
 
     connect(d->stream, &QXmppStream::connected,
