@@ -36,6 +36,7 @@ class QXmppSocket : public QObject
 public:
     enum SocketType {
         TcpSocket,
+        TlsSocket,
     };
     Q_ENUM(SocketType)
 

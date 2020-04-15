@@ -143,6 +143,7 @@ set(SOURCE_FILES
     base/QXmppStreamManagement.cpp
     base/QXmppStun.cpp
     base/QXmppTcpSocket.cpp
+    base/QXmppTlsSocket.cpp
     base/QXmppUtils.cpp
     base/QXmppVCardIq.cpp
     base/QXmppVersionIq.cpp
