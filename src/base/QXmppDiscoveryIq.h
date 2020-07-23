@@ -27,6 +27,8 @@
 #include "QXmppDataForm.h"
 #include "QXmppIq.h"
 
+#include <optional>
+
 #include <QSharedDataPointer>
 
 class QXmppDiscoveryIdentityPrivate;
@@ -110,8 +112,34 @@ public:
         ItemsQuery
     };
 
+    enum Feature {
+        ServiceDiscoveryInfo,
+        ServiceDiscoveryItems,
+        ExtendedStanzaAddressing,
+        MUC,
+        MUCAdmin,
+        MUCOwner,
+        MUCUser,
+        VCardTemp,
+        ResultSetManagement,
+#if QXMPP_BUILD
+        FEATURES_COUNT,
+#endif
+    };
+    using Features = QList<Feature>;
+    static std::optional<Feature> featureFromString(const QString &);
+    static QString featureToString(Feature);
+
     QStringList features() const;
     void setFeatures(const QStringList &features);
+    void setFeatures(const Features &);
+    bool hasFeature(Feature) const;
+    bool hasFeature(const QString &) const;
+    void addFeature(Feature);
+    void addFeature(const QString &);
+    void removeFeature(Feature);
+    void removeFeature(const QString &);
+    void clearFeatures();
 
     QList<QXmppDiscoveryIq::Identity> identities() const;
     void setIdentities(const QList<QXmppDiscoveryIq::Identity> &identities);

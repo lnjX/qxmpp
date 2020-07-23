@@ -42,16 +42,41 @@ void tst_QXmppDiscoveryIq::testDiscovery()
         "<iq id=\"disco1\" from=\"benvolio@capulet.lit/230193\" type=\"result\">"
         "<query xmlns=\"http://jabber.org/protocol/disco#info\">"
         "<identity category=\"client\" name=\"Exodus 0.9.1\" type=\"pc\"/>"
-        "<feature var=\"http://jabber.org/protocol/caps\"/>"
         "<feature var=\"http://jabber.org/protocol/disco#info\"/>"
         "<feature var=\"http://jabber.org/protocol/disco#items\"/>"
         "<feature var=\"http://jabber.org/protocol/muc\"/>"
+        "<feature var=\"http://jabber.org/protocol/caps\"/>"
         "</query>"
         "</iq>");
 
     QXmppDiscoveryIq disco;
     parsePacket(disco, xml);
+    QVERIFY(disco.hasFeature(QXmppDiscoveryIq::ServiceDiscoveryInfo));
+    QVERIFY(disco.hasFeature(QXmppDiscoveryIq::ServiceDiscoveryItems));
+    QVERIFY(disco.hasFeature(QXmppDiscoveryIq::MUC));
+    QVERIFY(disco.features().contains("http://jabber.org/protocol/caps"));
+    QVERIFY(disco.features().contains("http://jabber.org/protocol/disco#info"));
     QCOMPARE(disco.verificationString(), QByteArray::fromBase64("QgayPKawpkPSDYmwT/WM94uAlu0="));
+    serializePacket(disco, xml);
+
+    QXmppDiscoveryIq::Identity identity;
+    identity.setCategory("client");
+    identity.setName("Exodus 0.9.1");
+    identity.setType("pc");
+
+    disco = QXmppDiscoveryIq();
+    disco.setQueryType(QXmppDiscoveryIq::InfoQuery);
+    disco.setId("disco1");
+    disco.setFrom("benvolio@capulet.lit/230193");
+    disco.setType(QXmppIq::Result);
+    disco.setIdentities(QList<QXmppDiscoveryIq::Identity>() << identity);
+    disco.setFeatures(QXmppDiscoveryIq::Features() << QXmppDiscoveryIq::ServiceDiscoveryInfo
+                                                   << QXmppDiscoveryIq::ServiceDiscoveryItems
+                                                   << QXmppDiscoveryIq::MUC);
+    disco.addFeature("http://jabber.org/protocol/caps");
+
+    qDebug() << disco.features();
+
     serializePacket(disco, xml);
 }
 
@@ -62,10 +87,10 @@ void tst_QXmppDiscoveryIq::testDiscoveryWithForm()
         "<query xmlns=\"http://jabber.org/protocol/disco#info\" node=\"http://psi-im.org#q07IKJEyjvHSyhy//CH0CxmKi8w=\">"
         "<identity xml:lang=\"en\" category=\"client\" name=\"Psi 0.11\" type=\"pc\"/>"
         "<identity xml:lang=\"el\" category=\"client\" name=\"Ψ 0.11\" type=\"pc\"/>"
-        "<feature var=\"http://jabber.org/protocol/caps\"/>"
         "<feature var=\"http://jabber.org/protocol/disco#info\"/>"
         "<feature var=\"http://jabber.org/protocol/disco#items\"/>"
         "<feature var=\"http://jabber.org/protocol/muc\"/>"
+        "<feature var=\"http://jabber.org/protocol/caps\"/>"
         "<x xmlns=\"jabber:x:data\" type=\"result\">"
         "<field type=\"hidden\" var=\"FORM_TYPE\">"
         "<value>urn:xmpp:dataforms:softwareinfo</value>"

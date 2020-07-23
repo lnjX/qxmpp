@@ -26,9 +26,22 @@
 #include "QXmppConstants_p.h"
 #include "QXmppUtils.h"
 
+#include <QBitArray>
 #include <QCryptographicHash>
 #include <QDomElement>
 #include <QSharedData>
+
+static const QStringList FEATURE_STRINGS = {
+    ns_disco_info,
+    ns_disco_items,
+    ns_extended_addressing,
+    ns_muc,
+    ns_muc_admin,
+    ns_muc_owner,
+    ns_muc_user,
+    ns_vcard,
+    ns_rsm,
+};
 
 static bool identityLessThan(const QXmppDiscoveryIq::Identity &i1, const QXmppDiscoveryIq::Identity &i2)
 {
@@ -167,7 +180,8 @@ void QXmppDiscoveryIq::Item::setNode(const QString &node)
 class QXmppDiscoveryIqPrivate : public QSharedData
 {
 public:
-    QStringList features;
+    QBitArray features = QBitArray(QXmppDiscoveryIq::FEATURES_COUNT);
+    QStringList customFeatures;
     QList<QXmppDiscoveryIq::Identity> identities;
     QList<QXmppDiscoveryIq::Item> items;
     QXmppDataForm form;
@@ -180,6 +194,20 @@ QXmppDiscoveryIq::QXmppDiscoveryIq()
 {
 }
 
+std::optional<QXmppDiscoveryIq::Feature> QXmppDiscoveryIq::featureFromString(const QString &featureString)
+{
+    auto index = FEATURE_STRINGS.indexOf(featureString);
+    if (index >= 0) {
+        return Feature(index);
+    }
+    return std::nullopt;
+}
+
+QString QXmppDiscoveryIq::featureToString(QXmppDiscoveryIq::Feature feature)
+{
+    return FEATURE_STRINGS.at(int(feature));
+}
+
 QXmppDiscoveryIq::QXmppDiscoveryIq(const QXmppDiscoveryIq &) = default;
 
 QXmppDiscoveryIq::~QXmppDiscoveryIq() = default;
@@ -188,12 +216,88 @@ QXmppDiscoveryIq &QXmppDiscoveryIq::operator=(const QXmppDiscoveryIq &) = defaul
 
 QStringList QXmppDiscoveryIq::features() const
 {
-    return d->features;
+    QStringList strings;
+    for (int i = 0; i < d->features.size(); i++) {
+        if (d->features.at(i)) {
+            strings << FEATURE_STRINGS.at(i);
+        }
+    }
+
+    return strings << d->customFeatures;
 }
 
 void QXmppDiscoveryIq::setFeatures(const QStringList &features)
 {
-    d->features = features;
+    clearFeatures();
+
+    for (const auto &featureString : features) {
+        addFeature(featureString);
+    }
+}
+
+void QXmppDiscoveryIq::setFeatures(const QXmppDiscoveryIq::Features &features)
+{
+    clearFeatures();
+
+    for (const auto &feature : features) {
+        d->features.setBit(int(feature));
+    }
+}
+
+bool QXmppDiscoveryIq::hasFeature(QXmppDiscoveryIq::Feature feature) const
+{
+    return d->features.at(int(feature));
+}
+
+bool QXmppDiscoveryIq::hasFeature(const QString &featureString) const
+{
+    // check custom features first (should in most cases use less comparisons)
+    if (d->customFeatures.contains(featureString)) {
+        return true;
+    }
+
+    if (auto feature = featureFromString(featureString)) {
+        return d->features.at(int(*feature));
+    }
+    return false;
+}
+
+void QXmppDiscoveryIq::addFeature(QXmppDiscoveryIq::Feature feature)
+{
+    d->features.setBit(int(feature));
+}
+
+void QXmppDiscoveryIq::addFeature(const QString &featureString)
+{
+    if (auto feature = featureFromString(featureString)) {
+        d->features.setBit(int(*feature));
+    } else {
+        if (!d->customFeatures.contains(featureString)) {
+            d->customFeatures << featureString;
+        }
+    }
+}
+
+void QXmppDiscoveryIq::removeFeature(QXmppDiscoveryIq::Feature feature)
+{
+    d->features.clearBit(int(feature));
+}
+
+void QXmppDiscoveryIq::removeFeature(const QString &featureString)
+{
+    auto removedCount = d->customFeatures.removeAll(featureString);
+    if (!removedCount) {
+        if (auto feature = featureFromString(featureString)) {
+            d->features.clearBit(int(*feature));
+        }
+    }
+}
+
+void QXmppDiscoveryIq::clearFeatures()
+{
+    // clear() resizes the bit array to 0
+    d->features.fill(false);
+    d->customFeatures.clear();
 }
 
 QList<QXmppDiscoveryIq::Identity> QXmppDiscoveryIq::identities() const
@@ -263,7 +367,7 @@ QByteArray QXmppDiscoveryIq::verificationString() const
     QString S;
     QList<QXmppDiscoveryIq::Identity> sortedIdentities = d->identities;
     std::sort(sortedIdentities.begin(), sortedIdentities.end(), identityLessThan);
-    QStringList sortedFeatures = d->features;
+    QStringList sortedFeatures = features();
     std::sort(sortedFeatures.begin(), sortedFeatures.end());
     sortedFeatures.removeDuplicates();
     for (const auto &identity : sortedIdentities)
@@ -325,9 +429,9 @@ void QXmppDiscoveryIq::parseElementFromChild(const QDomElement &element)
     QDomElement itemElement = queryElement.firstChildElement();
     while (!itemElement.isNull()) {
         if (itemElement.tagName() == "feature") {
-            d->features.append(itemElement.attribute("var"));
+            addFeature(itemElement.attribute("var"));
         } else if (itemElement.tagName() == "identity") {
-            QXmppDiscoveryIq::Identity identity;
+            Identity identity;
             identity.setLanguage(itemElement.attribute("xml:lang"));
             identity.setCategory(itemElement.attribute("category"));
             identity.setName(itemElement.attribute("name"));
@@ -375,7 +479,8 @@ void QXmppDiscoveryIq::toXmlElementFromChild(QXmlStreamWriter *writer) const
             writer->writeEndElement();
         }
 
-        for (const auto &feature : d->features) {
+        const auto &featureStrings = features();
+        for (const auto &feature : featureStrings) {
             writer->writeStartElement("feature");
             helperToXmlAddAttribute(writer, "var", feature);
             writer->writeEndElement();
