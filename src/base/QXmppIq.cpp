@@ -3,6 +3,7 @@
  *
  * Author:
  *  Manjeet Dahiya
+ *  Linus Jahn
  *
  * Source:
  *  https://github.com/qxmpp-project/qxmpp
@@ -41,10 +42,46 @@ public:
     QXmppIq::Type type;
 };
 
+std::optional<QXmppIq> QXmppIq::fromDom(const QDomElement &element, QXmppIq &iq)
+{
+    if (element.tagName() != "iq" || !element.hasAttribute("type") || !element.hasAttribute("id"))
+        return std::nullopt;
+
+    const QString type = element.attribute("type");
+    bool typeFound = false;
+    for (int i = Error; i <= Result; i++) {
+        if (type == iq_types[i]) {
+            iq.d->type = Type(i);
+            typeFound = true;
+            break;
+        }
+    }
+
+    if (!typeFound)
+        return std::nullopt;
+
+    if (!QXmppStanza::fromDom(element, iq))
+        return std::nullopt;
+
+    return iq;
+}
+
+std::optional<QXmppIq> QXmppIq::fromDom(const QDomElement &element)
+{
+    QXmppIq newIq;
+    auto iq = fromDom(element, newIq);
+    if (!iq)
+        return std::nullopt;
+
+    iq->parseElementFromChild(element);
+    return iq;
+}
+
+///
 /// Constructs a QXmppIq with the specified \a type.
 ///
 /// \param type
-
+///
 QXmppIq::QXmppIq(QXmppIq::Type type)
     : QXmppStanza(), d(new QXmppIqPrivate)
 {
@@ -103,15 +140,7 @@ bool QXmppIq::isXmppStanza() const
 /// \cond
 void QXmppIq::parse(const QDomElement &element)
 {
-    QXmppStanza::parse(element);
-
-    const QString type = element.attribute("type");
-    for (int i = Error; i <= Result; i++) {
-        if (type == iq_types[i]) {
-            d->type = static_cast<Type>(i);
-            break;
-        }
-    }
+    fromDom(element, *this);
 
     parseElementFromChild(element);
 }

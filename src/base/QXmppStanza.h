@@ -5,6 +5,7 @@
  *  Manjeet Dahiya
  *  Jeremy Lainé
  *  Georg Rudoy
+ *  Linus Jahn
  *
  * Source:
  *  https://github.com/qxmpp-project/qxmpp
@@ -227,6 +228,9 @@ public:
     virtual void toXml(QXmlStreamWriter *writer) const = 0;
 
 protected:
+    // exception: no optional<> return because of abstract type
+    static bool fromDom(const QDomElement &element, QXmppStanza &derivedParent);
+
     void extensionsToXml(QXmlStreamWriter *writer) const;
     void generateAndSetNextId();
     /// \endcond

@@ -5,6 +5,7 @@
  *  Manjeet Dahiya
  *  Jeremy Lainé
  *  Georg Rudoy
+ *  Linus Jahn
  *
  * Source:
  *  https://github.com/qxmpp-project/qxmpp
@@ -514,11 +515,36 @@ public:
     QList<QXmppExtendedAddress> extendedAddresses;
 };
 
+bool QXmppStanza::fromDom(const QDomElement &element, QXmppStanza &stanza)
+{
+    stanza.d->from = element.attribute("from");
+    stanza.d->to = element.attribute("to");
+    stanza.d->id = element.attribute("id");
+    stanza.d->lang = element.attribute("lang");
+
+    QDomElement errorElement = element.firstChildElement("error");
+    if (!errorElement.isNull())
+        stanza.d->error.parse(errorElement);
+
+    // XEP-0033: Extended Stanza Addressing
+    QDomElement addressElement = element.firstChildElement("addresses").firstChildElement("address");
+    while (!addressElement.isNull()) {
+        QXmppExtendedAddress address;
+        address.parse(addressElement);
+        if (address.isValid())
+            stanza.d->extendedAddresses << address;
+        addressElement = addressElement.nextSiblingElement("address");
+    }
+
+    return true;
+}
+
+///
 /// Constructs a QXmppStanza with the specified sender and recipient.
 ///
 /// \param from
 /// \param to
-
+///
 QXmppStanza::QXmppStanza(const QString &from, const QString &to)
     : d(new QXmppStanzaPrivate)
 {
@@ -683,24 +709,7 @@ void QXmppStanza::generateAndSetNextId()
 
 void QXmppStanza::parse(const QDomElement &element)
 {
-    d->from = element.attribute("from");
-    d->to = element.attribute("to");
-    d->id = element.attribute("id");
-    d->lang = element.attribute("lang");
-
-    QDomElement errorElement = element.firstChildElement("error");
-    if (!errorElement.isNull())
-        d->error.parse(errorElement);
-
-    // XEP-0033: Extended Stanza Addressing
-    QDomElement addressElement = element.firstChildElement("addresses").firstChildElement("address");
-    while (!addressElement.isNull()) {
-        QXmppExtendedAddress address;
-        address.parse(addressElement);
-        if (address.isValid())
-            d->extendedAddresses << address;
-        addressElement = addressElement.nextSiblingElement("address");
-    }
+    fromDom(element, *this);
 }
 
 void QXmppStanza::extensionsToXml(QXmlStreamWriter *xmlWriter) const

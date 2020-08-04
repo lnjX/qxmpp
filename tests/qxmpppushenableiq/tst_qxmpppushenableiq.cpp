@@ -45,8 +45,7 @@ void tst_QXmppPushEnableIq::testPushEnable()
         R"(<enable xmlns="urn:xmpp:push:0" jid="push-5.client.example" node="yxs32uqsflafdk3iuqo"/>)"
         "</iq>");
 
-    QXmppPushEnableIq iq;
-    parsePacket(iq, xml);
+    auto iq = parsePacket<QXmppPushEnableIq>(xml);
     QCOMPARE(iq.mode(), QXmppPushEnableIq::Enable);
     QCOMPARE(iq.jid(), QStringLiteral("push-5.client.example"));
     QCOMPARE(iq.node(), QStringLiteral("yxs32uqsflafdk3iuqo"));
@@ -70,8 +69,7 @@ void tst_QXmppPushEnableIq::testPushDisable()
         R"(<disable xmlns="urn:xmpp:push:0" jid="push-5.client.example" node="yxs32uqsflafdk3iuqo"/>)"
         "</iq>");
 
-    QXmppPushEnableIq iq;
-    parsePacket(iq, xml);
+    auto iq = *QXmppPushEnableIq::fromDom(xmlToDom(xml));
     QCOMPARE(iq.mode(), QXmppPushEnableIq::Disable);
     QCOMPARE(iq.jid(), QStringLiteral("push-5.client.example"));
 
@@ -111,8 +109,7 @@ void tst_QXmppPushEnableIq::testDataForm()
         "</enable>"
         "</iq>");
 
-    QXmppPushEnableIq iq;
-    parsePacket(iq, xml);
+    auto iq = *QXmppPushEnableIq::fromDom(xmlToDom(xml));
     QVERIFY(!iq.dataForm().isNull());
     QCOMPARE(iq.dataForm().fields().size(), 2);
 

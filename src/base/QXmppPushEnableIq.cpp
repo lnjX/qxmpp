@@ -39,6 +39,41 @@ public:
     QXmppDataForm dataForm;
 };
 
+std::optional<QXmppPushEnableIq> QXmppPushEnableIq::fromDom(const QDomElement &element)
+{
+    QDomElement childElement = element.firstChildElement();
+    if (childElement.namespaceURI() != ns_push) {
+        return std::nullopt;
+    }
+
+    // create IQ
+    QXmppPushEnableIq iq;
+    // parse basic IQ attributes
+    if (!QXmppIq::fromDom(element, iq)) {
+        return std::nullopt;
+    }
+
+    if (childElement.tagName() == QStringLiteral("enable")) {
+        iq.d->mode = Enable;
+
+        auto dataFormElement = childElement.firstChildElement("x");
+        if (!dataFormElement.isNull() && dataFormElement.namespaceURI() == ns_data) {
+            QXmppDataForm dataForm;
+            dataForm.parse(dataFormElement);
+            iq.d->dataForm = dataForm;
+        }
+    } else if (childElement.tagName() == QStringLiteral("disable")) {
+        iq.d->mode = Disable;
+    } else {
+        return std::nullopt;
+    }
+
+    iq.d->jid = childElement.attribute(QStringLiteral("jid"));
+    iq.d->node = childElement.attribute(QStringLiteral("node"));
+
+    return iq;
+}
+
 QXmppPushEnableIq::QXmppPushEnableIq()
     : d(new QXmppPushEnableIqPrivate())
 {
@@ -118,6 +153,13 @@ void QXmppPushEnableIq::setDataForm(const QXmppDataForm &form)
     d->dataForm = form;
 }
 
+void QXmppPushEnableIq::parse(const QDomElement &element)
+{
+    if (auto iq = fromDom(element)) {
+        *this = *iq;
+    }
+}
+
 ///
 /// \brief Checks whether a QDomElement is a push notification enable / disable
 /// IQ.
@@ -130,30 +172,8 @@ bool QXmppPushEnableIq::isPushEnableIq(const QDomElement &element)
 }
 
 /// \cond
-void QXmppPushEnableIq::parseElementFromChild(const QDomElement &element)
+void QXmppPushEnableIq::parseElementFromChild(const QDomElement &)
 {
-    QDomElement childElement = element.firstChildElement();
-    while (!childElement.isNull()) {
-        if (childElement.namespaceURI() == ns_push) {
-            if (childElement.tagName() == QStringLiteral("enable")) {
-                d->mode = Enable;
-
-                auto dataFormElement = childElement.firstChildElement("x");
-                if (!dataFormElement.isNull() && dataFormElement.namespaceURI() == ns_data) {
-                    QXmppDataForm dataForm;
-                    dataForm.parse(dataFormElement);
-                    d->dataForm = dataForm;
-                }
-            } else {
-                d->mode = Disable;
-            }
-            d->jid = childElement.attribute(QStringLiteral("jid"));
-            d->node = childElement.attribute(QStringLiteral("node"));
-            break;
-        }
-
-        childElement = childElement.nextSiblingElement();
-    }
 }
 
 void QXmppPushEnableIq::toXmlElementFromChild(QXmlStreamWriter *writer) const

@@ -27,6 +27,18 @@
 #include <QDomDocument>
 #include <QtTest>
 
+// QVERIFY2 with empty return value (return {};)
+#define QVERIFY_RV(statement, description)                                       \
+    if (!QTest::qVerify(statement, #statement, description, __FILE__, __LINE__)) \
+        return {};
+
+QDomElement xmlToDom(const QByteArray &xml)
+{
+    QDomDocument doc;
+    QVERIFY_RV(doc.setContent(xml, true), "XML is not valid");
+    return doc.documentElement();
+}
+
 template<class T>
 static void parsePacket(T &packet, const QByteArray &xml)
 {
@@ -35,6 +47,14 @@ static void parsePacket(T &packet, const QByteArray &xml)
     QCOMPARE(doc.setContent(xml, true), true);
     QDomElement element = doc.documentElement();
     packet.parse(element);
+}
+
+template<class T>
+static T parsePacket(const QByteArray &xml)
+{
+    auto packet = T::fromDom(xmlToDom(xml));
+    QVERIFY_RV(packet.has_value(), "Packet could not be parsed from QDomElement!");
+    return *packet;
 }
 
 template<class T>

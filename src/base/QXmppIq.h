@@ -3,6 +3,7 @@
  *
  * Author:
  *  Manjeet Dahiya
+ *  Linus Jahn
  *
  * Source:
  *  https://github.com/qxmpp-project/qxmpp
@@ -34,10 +35,11 @@
 
 class QXmppIqPrivate;
 
+///
 /// \brief The QXmppIq class is the base class for all IQs.
 ///
 /// \ingroup Stanzas
-
+///
 class QXMPP_EXPORT QXmppIq : public QXmppStanza
 {
 public:
@@ -48,6 +50,8 @@ public:
         Set,        ///< Set request.
         Result      ///< Result.
     };
+
+    static std::optional<QXmppIq> fromDom(const QDomElement &element);
 
     QXmppIq(QXmppIq::Type type = QXmppIq::Get);
     QXmppIq(const QXmppIq &other);
@@ -65,6 +69,8 @@ public:
     void toXml(QXmlStreamWriter *writer) const override;
 
 protected:
+    static std::optional<QXmppIq> fromDom(const QDomElement &element, QXmppIq &derivedParent);
+
     virtual void parseElementFromChild(const QDomElement &element);
     virtual void toXmlElementFromChild(QXmlStreamWriter *writer) const;
     /// \endcond

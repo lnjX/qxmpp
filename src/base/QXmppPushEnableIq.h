@@ -39,9 +39,12 @@ class QXmppDataForm;
 class QXMPP_EXPORT QXmppPushEnableIq : public QXmppIq
 {
 public:
+    static std::optional<QXmppPushEnableIq> fromDom(const QDomElement &element);
+
     QXmppPushEnableIq();
     QXmppPushEnableIq(const QXmppPushEnableIq &);
     ~QXmppPushEnableIq();
+
     QXmppPushEnableIq &operator=(const QXmppPushEnableIq &);
 
     ///
@@ -64,6 +67,8 @@ public:
 
     QXmppDataForm dataForm() const;
     void setDataForm(const QXmppDataForm &form);
+
+    void parse(const QDomElement &element) override;
 
     static bool isPushEnableIq(const QDomElement &element);
 
