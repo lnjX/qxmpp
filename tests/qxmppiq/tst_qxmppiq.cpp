@@ -41,19 +41,19 @@ void tst_QXmppIq::testBasic_data()
     QTest::addColumn<int>("type");
 
     QTest::newRow("get")
-        << QByteArray(R"(<iq to="foo@example.com/QXmpp" from="bar@example.com/QXmpp" type="get"/>)")
+        << QByteArray(R"(<iq id="foo" to="foo@example.com/QXmpp" from="bar@example.com/QXmpp" type="get"/>)")
         << int(QXmppIq::Get);
 
     QTest::newRow("set")
-        << QByteArray(R"(<iq to="foo@example.com/QXmpp" from="bar@example.com/QXmpp" type="set"/>)")
+        << QByteArray(R"(<iq id="foo" to="foo@example.com/QXmpp" from="bar@example.com/QXmpp" type="set"/>)")
         << int(QXmppIq::Set);
 
     QTest::newRow("result")
-        << QByteArray(R"(<iq to="foo@example.com/QXmpp" from="bar@example.com/QXmpp" type="result"/>)")
+        << QByteArray(R"(<iq id="foo" to="foo@example.com/QXmpp" from="bar@example.com/QXmpp" type="result"/>)")
         << int(QXmppIq::Result);
 
     QTest::newRow("error")
-        << QByteArray(R"(<iq to="foo@example.com/QXmpp" from="bar@example.com/QXmpp" type="error"/>)")
+        << QByteArray(R"(<iq id="foo" to="foo@example.com/QXmpp" from="bar@example.com/QXmpp" type="error"/>)")
         << int(QXmppIq::Error);
 }
 
@@ -67,6 +67,7 @@ void tst_QXmppIq::testBasic()
     QCOMPARE(iq.to(), QString("foo@example.com/QXmpp"));
     QCOMPARE(iq.from(), QString("bar@example.com/QXmpp"));
     QCOMPARE(int(iq.type()), type);
+    QCOMPARE(iq.id(), QString("foo"));
     serializePacket(iq, xml);
 }
 

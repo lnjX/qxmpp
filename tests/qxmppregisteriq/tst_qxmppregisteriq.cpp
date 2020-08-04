@@ -249,7 +249,7 @@ void tst_QXmppRegisterIq::testSetWithForm()
 void tst_QXmppRegisterIq::testBobData()
 {
     const QByteArray xml = QByteArrayLiteral(
-        "<iq type=\"result\">"
+        "<iq id=\"foo\" type=\"result\">"
         "<query xmlns=\"jabber:iq:register\">"
         "<data xmlns=\"urn:xmpp:bob\" "
         "cid=\"sha1+5a4c38d44fc64805cbb2d92d8b208be13ff40c0f@bob.xmpp.org\" "
@@ -307,7 +307,7 @@ void tst_QXmppRegisterIq::testBobData()
     QXmppRegisterIq parsedIq;
     parsePacket(parsedIq, xml);
     QCOMPARE(parsedIq.type(), QXmppIq::Result);
-    QCOMPARE(parsedIq.id(), QStringLiteral(""));
+    QCOMPARE(parsedIq.id(), QStringLiteral("foo"));
     QCOMPARE(parsedIq.bitsOfBinaryData().size(), 1);
     QCOMPARE(parsedIq.bitsOfBinaryData().first().cid().algorithm(), data.cid().algorithm());
     QCOMPARE(parsedIq.bitsOfBinaryData().first().cid().hash(), data.cid().hash());
@@ -320,7 +320,7 @@ void tst_QXmppRegisterIq::testBobData()
 
     QXmppRegisterIq iq;
     iq.setType(QXmppIq::Result);
-    iq.setId(QStringLiteral(""));
+    iq.setId(QStringLiteral("foo"));
     QXmppBitsOfBinaryDataList bobDataList;
     bobDataList << data;
     iq.setBitsOfBinaryData(bobDataList);
@@ -328,7 +328,7 @@ void tst_QXmppRegisterIq::testBobData()
 
     QXmppRegisterIq iq2;
     iq2.setType(QXmppIq::Result);
-    iq2.setId(QStringLiteral(""));
+    iq2.setId(QStringLiteral("foo"));
     iq2.bitsOfBinaryData() << data;
     serializePacket(iq2, xml);
 
@@ -340,7 +340,7 @@ void tst_QXmppRegisterIq::testBobData()
 void tst_QXmppRegisterIq::testRegistered()
 {
     const QByteArray xml = QByteArrayLiteral(
-        "<iq type=\"result\">"
+        "<iq id=\"foo\" type=\"result\">"
         "<query xmlns=\"jabber:iq:register\">"
         "<registered/>"
         "<username>juliet</username>"
@@ -354,7 +354,7 @@ void tst_QXmppRegisterIq::testRegistered()
     serializePacket(iq, xml);
 
     iq = QXmppRegisterIq();
-    iq.setId(QStringLiteral(""));
+    iq.setId(QStringLiteral("foo"));
     iq.setType(QXmppIq::Result);
     iq.setIsRegistered(true);
     iq.setUsername(QStringLiteral("juliet"));
@@ -364,7 +364,7 @@ void tst_QXmppRegisterIq::testRegistered()
 void tst_QXmppRegisterIq::testRemove()
 {
     const QByteArray xml = QByteArrayLiteral(
-        "<iq type=\"result\">"
+        "<iq id=\"foo\" type=\"result\">"
         "<query xmlns=\"jabber:iq:register\">"
         "<remove/>"
         "<username>juliet</username>"
@@ -378,7 +378,7 @@ void tst_QXmppRegisterIq::testRemove()
     serializePacket(iq, xml);
 
     iq = QXmppRegisterIq();
-    iq.setId(QStringLiteral(""));
+    iq.setId(QStringLiteral("foo"));
     iq.setType(QXmppIq::Result);
     iq.setIsRemove(true);
     iq.setUsername(QStringLiteral("juliet"));
