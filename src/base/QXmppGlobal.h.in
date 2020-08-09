@@ -77,5 +77,16 @@ inline QLatin1String QXmppVersion()
 #define QT_WARNING_DISABLE_DEPRECATED
 #endif
 
+namespace QXmpp {
+
+    enum PacketState : quint8 {
+        Sent,
+        Acknowledged,
+        SocketError,
+        NotSent,
+    };
+
+}
+
 #endif // QXMPPGLOBAL_H
 
