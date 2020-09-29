@@ -34,8 +34,9 @@
 #include <QDomDocument>
 #include <QHostAddress>
 #include <QMap>
-#include <QRegExp>
+#include <QRegularExpression>
 #include <QSslSocket>
+#include <QStringBuilder>
 #include <QStringList>
 #include <QTime>
 #include <QXmlStreamWriter>
@@ -43,18 +44,20 @@
 #if QT_VERSION < QT_VERSION_CHECK(5, 10, 0)
 static bool randomSeeded = false;
 #endif
-static const QByteArray streamRootElementEnd = QByteArrayLiteral("</stream:stream>");
 
 class QXmppStreamPrivate
 {
 public:
     QXmppStreamPrivate();
 
-    QByteArray dataBuffer;
     QSslSocket *socket;
+    QString dataBuffer;
 
     // incoming stream state
-    QByteArray streamStart;
+    QXmlStreamReader reader;
+    QXmlStreamNamespaceDeclarations streamNamespaces;
+    QString stanzaXmlWrapper;
+    qint64 processedIndex;
 
     bool streamManagementEnabled;
     QMap<unsigned, QByteArray> unacknowledgedStanzas;
@@ -101,7 +104,7 @@ void QXmppStream::disconnectFromHost()
     d->streamManagementEnabled = false;
     if (d->socket) {
         if (d->socket->state() == QAbstractSocket::ConnectedState) {
-            sendData(streamRootElementEnd);
+            sendData(QByteArrayLiteral("</stream:stream>"));
             d->socket->flush();
         }
         // FIXME: according to RFC 6120 section 4.4, we should wait for
@@ -120,7 +123,9 @@ void QXmppStream::handleStart()
 {
     d->streamManagementEnabled = false;
     d->dataBuffer.clear();
-    d->streamStart.clear();
+    d->reader.clear();
+    d->processedIndex = 0;
+    d->stanzaXmlWrapper.clear();
 }
 
 ///
@@ -216,72 +221,7 @@ void QXmppStream::_q_socketError(QAbstractSocket::SocketError socketError)
 
 void QXmppStream::_q_socketReadyRead()
 {
-    d->dataBuffer.append(d->socket->readAll());
-
-    // handle whitespace pings
-    if (!d->dataBuffer.isEmpty() && d->dataBuffer.trimmed().isEmpty()) {
-        d->dataBuffer.clear();
-        handleStanza(QDomElement());
-    }
-
-    // FIXME : maybe these QRegExps could be static?
-    QRegExp startStreamRegex(R"(^(<\?xml.*\?>)?\s*<stream:stream.*>)");
-    startStreamRegex.setMinimal(true);
-    QRegExp endStreamRegex("</stream:stream>$");
-    endStreamRegex.setMinimal(true);
-
-    // check whether we need to add stream start / end elements
-    //
-    // NOTE: as we may only have partial XML content, do not alter the stream's
-    // state until we have a valid XML document!
-    QByteArray completeXml = d->dataBuffer;
-    const QString strData = QString::fromUtf8(d->dataBuffer);
-    bool streamStart = false;
-    if (d->streamStart.isEmpty() && startStreamRegex.indexIn(strData) != -1)
-        streamStart = true;
-    else
-        completeXml.prepend(d->streamStart);
-    bool streamEnd = false;
-    if (endStreamRegex.indexIn(strData) != -1)
-        streamEnd = true;
-    else
-        completeXml.append(streamRootElementEnd);
-
-    // check whether we have a valid XML document
-    QDomDocument doc;
-    if (!doc.setContent(completeXml, true))
-        return;
-
-    // remove data from buffer
-    logReceived(strData);
-    d->dataBuffer.clear();
-
-    // process stream start
-    if (streamStart) {
-        d->streamStart = startStreamRegex.cap(0).toUtf8();
-        handleStream(doc.documentElement());
-    }
-
-    // process stanzas
-    QDomElement nodeRecv = doc.documentElement().firstChildElement();
-    while (!nodeRecv.isNull()) {
-        if (QXmppStreamManagementAck::isStreamManagementAck(nodeRecv))
-            handleAcknowledgement(nodeRecv);
-        else if (QXmppStreamManagementReq::isStreamManagementReq(nodeRecv))
-            sendAcknowledgement();
-        else {
-            handleStanza(nodeRecv);
-            if (nodeRecv.tagName() == QLatin1String("message") ||
-                nodeRecv.tagName() == QLatin1String("presence") ||
-                nodeRecv.tagName() == QLatin1String("iq"))
-                ++d->lastIncomingSequenceNumber;
-        }
-        nodeRecv = nodeRecv.nextSiblingElement();
-    }
-
-    // process stream end
-    if (streamEnd)
-        disconnectFromHost();
+    processData(QString::fromUtf8(d->socket->readAll()));
 }
 
 ///
@@ -400,4 +340,165 @@ void QXmppStream::sendAcknowledgementRequest()
 
     // send packet
     sendData(data);
+}
+
+void QXmppStream::processData(const QString &newData)
+{
+    d->dataBuffer.append(newData);
+    d->reader.addData(newData);
+
+    auto currentToken = d->reader.readNext();
+    while (true) {
+        qDebug() << "PROCESS DATA" << currentToken;
+        switch (currentToken) {
+        case QXmlStreamReader::StartDocument:
+            // XML document starts, we need the next token to see if it's a
+            // correct stream
+            d->processedIndex = d->reader.characterOffset();
+            d->dataBuffer = d->dataBuffer.mid(d->reader.characterOffset());
+            qDebug() << "StartDocument: processedIndex=" << d->processedIndex;
+            break;
+        case QXmlStreamReader::StartElement: {
+            // special case: stream start
+            qDebug() << "StartElement:" << d->reader.name() << d->reader.namespaceUri();
+            if (d->reader.name() == QLatin1String("stream") &&
+                d->reader.namespaceUri() == QLatin1String(ns_stream)) {
+                const auto tagEnd = d->reader.characterOffset() - d->processedIndex;
+                auto tagData = d->dataBuffer.left(tagEnd);
+                // insert '/' to close the tag
+                tagData.insert(tagData.size() - 1, u'/');
+
+                QDomDocument doc;
+                doc.setContent(tagData, true);
+
+                handleStream(doc.documentElement());
+
+                // remove from buffer and update processed index
+                d->dataBuffer = d->dataBuffer.mid(tagEnd + 1);
+                d->processedIndex = d->reader.characterOffset();
+
+                // When parsing the stanzas to DOM we use a wrapper that
+                // contains the namespaces from the stream.
+                //
+                // This is required for successful parsing of the stanzas using
+                // a QDomDocument. Especially for <stream:features/>, but also
+                // for having the correct namespaces (e.g. 'jabber:client') when
+                // parsing other stanzas.
+                //
+                // We need to save the new namespace(s) now.
+                d->stanzaXmlWrapper = createStanzaXmlWrapper(d->reader);
+                break;
+            }
+
+            // skip element; we only want to know where the stanza ends
+            // further processing happens in DOM
+            d->reader.skipCurrentElement();
+
+            // element processing and errors are handled in the next loop run
+            currentToken = d->reader.tokenType();
+            continue;
+        }
+        case QXmlStreamReader::EndElement: {
+            qDebug() << "\tEndElement" << d->reader.name();
+            qDebug() << d->reader.error();
+
+            if (d->reader.hasError() && d->reader.error() == QXmlStreamReader::PrematureEndOfDocumentError) {
+                return;
+            }
+
+            // special case: stream end
+            if (d->reader.name() == QLatin1String("stream") &&
+                d->reader.namespaceUri() == QLatin1String(ns_stream)) {
+                disconnectFromHost();
+                return;
+            }
+
+            const auto bufferElementEnd = d->reader.characterOffset() - d->processedIndex;
+            const auto stanzaData = d->dataBuffer.left(bufferElementEnd);
+
+            // process stanza (will use QDom-based parsing)
+            processReceivedStanza(stanzaData);
+
+            // remove stanza data from data buffer
+            d->dataBuffer = d->dataBuffer.mid(bufferElementEnd + 1);
+            // increase processed index
+            d->processedIndex = d->reader.characterOffset();
+
+            break;
+        }
+        case QXmlStreamReader::Invalid:
+            if (d->reader.error() == QXmlStreamReader::PrematureEndOfDocumentError) {
+                // the stanza has not been received completely yet
+                // wait for more data
+                qDebug() << "PrematureEndOfDocument";
+                return;
+            } else {
+                // fatal error: disconnect?
+            }
+            break;
+        case QXmlStreamReader::EndDocument:
+        case QXmlStreamReader::NoToken:
+        case QXmlStreamReader::Characters:
+        case QXmlStreamReader::Comment:
+        case QXmlStreamReader::DTD:
+        case QXmlStreamReader::EntityReference:
+        case QXmlStreamReader::ProcessingInstruction:
+            break;
+        }
+
+        if (d->reader.atEnd()) {
+            break;
+        }
+
+        currentToken = d->reader.readNext();
+    }
+}
+
+void QXmppStream::processReceivedStanza(const QString &stanzaData)
+{
+    // log only the pure stanza data
+    logReceived(stanzaData);
+
+    QDomDocument doc;
+    // parse the wrapped stanza (required for namespaces)
+    doc.setContent(d->stanzaXmlWrapper.arg(stanzaData), true);
+    auto stanzaElement = doc.documentElement().firstChildElement();
+
+    if (QXmppStreamManagementAck::isStreamManagementAck(stanzaElement)) {
+        handleAcknowledgement(stanzaElement);
+    } else if (QXmppStreamManagementReq::isStreamManagementReq(stanzaElement)) {
+        sendAcknowledgement();
+    } else {
+        handleStanza(stanzaElement);
+
+        if (stanzaElement.tagName() == QLatin1String("message") ||
+            stanzaElement.tagName() == QLatin1String("presence") ||
+            stanzaElement.tagName() == QLatin1String("iq")) {
+            d->lastIncomingSequenceNumber++;
+        }
+    }
+}
+
+QString QXmppStream::createStanzaXmlWrapper(const QXmlStreamReader &reader)
+{
+    QString output;
+    QXmlStreamWriter wrapperWriter(&output);
+    wrapperWriter.writeStartDocument();
+    wrapperWriter.writeStartElement(QStringLiteral("wrapper"));
+    // write default namespace (e.g. 'jabber:client')
+    wrapperWriter.writeDefaultNamespace(reader.namespaceUri().toString());
+
+    // write other definied namespaces (e.g. 'stream:xmlns="..."')
+    const auto xmlNamespaces = reader.namespaceDeclarations();
+    for (const auto &xmlNamespace : xmlNamespaces) {
+        wrapperWriter.writeNamespace(xmlNamespace.namespaceUri().toString(),
+                                     xmlNamespace.prefix().toString());
+    }
+
+    // will be used for inserting the stanza
+    wrapperWriter.writeCharacters("%1");
+    wrapperWriter.writeEndElement();
+    wrapperWriter.writeEndDocument();
+
+    return output;
 }

@@ -32,12 +32,14 @@
 
 class QDomElement;
 class QSslSocket;
+class QXmlStreamAttributes;
+class QXmlStreamReader;
 class QXmppStanza;
 class QXmppStreamPrivate;
 
+///
 /// \brief The QXmppStream class is the base class for all XMPP streams.
 ///
-
 class QXMPP_EXPORT QXmppStream : public QXmppLoggable
 {
     Q_OBJECT
@@ -96,6 +98,13 @@ private Q_SLOTS:
     void _q_socketReadyRead();
 
 private:
+#ifdef QXMPP_TEST
+public:
+#endif
+    void processData(const QString &data);
+    void processReceivedStanza(const QString &stanzaData);
+    static QString createStanzaXmlWrapper(const QXmlStreamReader &);
+
     QXmppStreamPrivate *const d;
 };
 
