@@ -44,6 +44,8 @@ private slots:
 
     void testIndexOfExtension();
 
+    Q_SLOT void testSendPacketAsync();
+
 private:
     QXmppClient *client;
 };
@@ -84,24 +86,28 @@ void tst_QXmppClient::testSendMessage()
 
 void tst_QXmppClient::testIndexOfExtension()
 {
-    auto client = new QXmppClient;
+    QXmppClient client;
 
-    for (auto *ext : client->extensions()) {
-        client->removeExtension(ext);
+    for (auto *ext : client.extensions()) {
+        client.removeExtension(ext);
     }
 
-    auto rosterManager = new QXmppRosterManager(client);
+    auto rosterManager = new QXmppRosterManager(&client);
     auto vCardManager = new QXmppVCardManager;
 
-    client->addExtension(rosterManager);
-    client->addExtension(vCardManager);
+    client.addExtension(rosterManager);
+    client.addExtension(vCardManager);
 
     // This extension is not in the list.
-    QCOMPARE(client->indexOfExtension<QXmppVersionManager>(), -1);
+    QCOMPARE(client.indexOfExtension<QXmppVersionManager>(), -1);
 
     // These extensions are in the list.
-    QCOMPARE(client->indexOfExtension<QXmppRosterManager>(), 0);
-    QCOMPARE(client->indexOfExtension<QXmppVCardManager>(), 1);
+    QCOMPARE(client.indexOfExtension<QXmppRosterManager>(), 0);
+    QCOMPARE(client.indexOfExtension<QXmppVCardManager>(), 1);
+}
+
+void tst_QXmppClient::testSendPacketAsync()
+{
 }
 
 QTEST_MAIN(tst_QXmppClient)
