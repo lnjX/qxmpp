@@ -11,17 +11,25 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${PROJECT_SOURCE_DIR}/cmake/modules")
 
 find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Core Network Xml)
-find_package(Qt${QT_VERSION_MAJOR} 5.9.2 REQUIRED COMPONENTS Core Network Xml)
+find_package(Qt${QT_VERSION_MAJOR} 5.9.2 REQUIRED CONFIG COMPONENTS Core Network Xml)
+find_package(ECM QUIET)
 
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 
+if(ECM_FOUND)
+    set(CMAKE_MODULE_PATH ${ECM_MODULE_PATH})
+endif()
+
+include(FeatureSummary)
 include(GNUInstallDirs)
+include(CMakePackageConfigHelpers)
 
 option(BUILD_TESTS "Build tests." ON)
 option(BUILD_INTERNAL_TESTS "Build internal tests." OFF)
 option(BUILD_DOCUMENTATION "Build API documentation." OFF)
 option(BUILD_EXAMPLES "Build examples." ON)
+option(BUILD_QCH "Build API documentation in QCH format (for e.g. Qt Assistant, Qt Creator & KDevelop)" OFF)
 
 option(WITH_GSTREAMER "Build with GStreamer support for Jingle" OFF)
 
@@ -46,8 +54,6 @@ endif()
 if(BUILD_EXAMPLES)
     add_subdirectory(examples)
 endif()
-
-include(CMakePackageConfigHelpers)
 
 configure_package_config_file(
     QXmppConfig.cmake.in
