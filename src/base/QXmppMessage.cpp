@@ -16,6 +16,9 @@
 #include "QXmppTrustMessageElement.h"
 #include "QXmppUtils.h"
 
+#include <any>
+#include <typeindex>
+
 #include <QDateTime>
 #include <QDomElement>
 #include <QTextStream>
@@ -61,6 +64,154 @@ enum StampType {
     LegacyDelayedDelivery,  // XEP-0091: Legacy Delayed Delivery
     DelayedDelivery         // XEP-0203: Delayed Delivery
 };
+
+using AnyParser = std::optional<std::any>(*)(const QDomElement &);
+using AnySerializer = void(*)(const std::any &, QXmlStreamWriter &);
+template <typename T>
+using ExtensionParser = std::optional<T>(*)(const QDomElement &);
+template <typename T>
+using ExtensionSerializer = void(*)(const T &, QXmlStreamWriter &);
+
+struct XmlElementMeta {
+    QStringView tagName;
+    QStringView xmlns;
+
+    bool operator==(const XmlElementMeta &other) {
+        return tagName == other.tagName && xmlns == other.xmlns;
+    }
+};
+
+template <>
+struct std::hash<XmlElementMeta> {
+    std::size_t operator()(const XmlElementMeta &m) const noexcept {
+        auto h1 = std::hash<QStringView>{}(m.tagName);
+        auto h2 = std::hash<QStringView>{}(m.xmlns);
+        return h1 ^ (h2 << 1);
+    }
+};
+
+auto messageExtensionSerializers() -> std::unordered_map<std::type_index, AnySerializer> &
+{
+    thread_local static std::unordered_map<std::type_index, AnySerializer> typeSerializers;
+    return typeSerializers;
+}
+
+auto messageExtensionParsers() -> std::unordered_map<XmlElementMeta, AnyParser> &
+{
+    thread_local static std::unordered_map<XmlElementMeta, AnyParser> typeParsers;
+    return typeParsers;
+}
+
+template <typename T, ExtensionSerializer<T> Serializer>
+auto registerMessageExtensionSerializer()
+{
+    AnySerializer anySerializer = [](const std::any &e, QXmlStreamWriter &w) {
+        Serializer(std::any_cast<T>(e), w);
+    };
+    messageExtensionSerializers().emplace(std::type_index(typeid(T)), anySerializer);
+}
+
+template <typename T, typename Lambda>
+auto map(std::optional<T> &&val, Lambda lambda)
+{
+    using MappedType = decltype(lambda({}));
+    if (val) {
+        return std::optional<MappedType>(lambda(std::move(*val)));
+    }
+    return std::optional<MappedType>();
+}
+
+template <typename T, ExtensionParser<T> Parser>
+auto registerMessageExtensionParser(QStringView tagName, QStringView xmlns)
+{
+    AnyParser anyParser = [](const QDomElement &el) -> std::optional<std::any> {
+        return map(Parser(el), [](auto &&val) -> std::any { return {std::move(val)}; });
+    };
+    messageExtensionParsers().emplace(XmlElementMeta {tagName, xmlns}, anyParser);
+}
+
+auto serializeMessageExtensions(const std::vector<std::any> &extensions, QXmlStreamWriter &w)
+{
+    auto &registry = messageExtensionSerializers();
+    for (const auto &ext : extensions) {
+        registry[std::type_index(ext.type())](ext, w);
+    }
+}
+
+struct Test {
+    QString name;
+};
+
+struct XmlAttribute {
+    QString key;
+    QString value;
+};
+
+struct XmlElement {
+    QString tagName;
+    QString text;
+    std::vector<XmlAttribute> attributes;
+    std::vector<XmlElement> subElements;
+};
+
+auto countSubElements(const QDomElement &el)
+{
+    std::size_t counter = 0;
+    for (auto subEl = el.firstChildElement();
+         !subEl.isNull();
+         subEl = subEl.nextSiblingElement()) {
+        counter++;
+    }
+    return counter;
+}
+
+static XmlElement parseXmlElement(const QDomElement &el) {
+    auto parseAttributes = [](const QDomNamedNodeMap &attrs) {
+        std::vector<XmlAttribute> result;
+        result.reserve(attrs.size());
+        for (int i = 0; i < attrs.size(); i++) {
+            auto attr = attrs.item(i).toAttr();
+            result.push_back({attr.name(), attr.value()});
+        }
+        return result;
+    };
+    auto parseSubEls = [](auto el) {
+        std::vector<XmlElement> subEls;
+        subEls.reserve(countSubElements(el));
+        for (auto subEl = el.firstChildElement();
+             !subEl.isNull();
+             subEl = subEl.nextSiblingElement()) {
+            subEls.push_back(parseXmlElement(subEl));
+        }
+        return subEls;
+    };
+    return {
+        el.tagName(),
+        el.text(),
+        parseAttributes(el.attributes()),
+        parseSubEls(el),
+    };
+}
+static std::optional<XmlElement> parseXmlElementOpt(const QDomElement &el) {
+    if (el.isNull())
+        return {};
+    return parseXmlElement(el);
+}
+static void serializeXmlElement(const XmlElement &el, QXmlStreamWriter &w) {
+    w.writeStartElement(el.tagName);
+    for (const auto &attr : el.attributes) {
+        w.writeAttribute(attr.key, attr.value);
+    }
+    for (const auto &subEl : el.subElements) {
+        serializeXmlElement(subEl, w);
+    }
+    w.writeCharacters(el.text);
+    w.writeEndElement();
+}
+
+static void serializeTest(const Test &val, QXmlStreamWriter &w) {
+    w.writeTextElement("test", val.name);
+}
 
 class QXmppMessagePrivate : public QSharedData
 {
@@ -172,11 +323,31 @@ QXmppMessagePrivate::QXmppMessagePrivate()
 /// \param body
 /// \param thread
 
+#include <QDebug>
 QXmppMessage::QXmppMessage(const QString &from, const QString &to, const QString &body, const QString &thread)
     : QXmppStanza(from, to), d(new QXmppMessagePrivate)
 {
     d->body = body;
     d->thread = thread;
+
+    registerMessageExtensionSerializer<Test, serializeTest>();
+    registerMessageExtensionSerializer<XmlElement, serializeXmlElement>();
+//    registerMessageExtensionParser<XmlElement, parseXmlElementOpt>();
+    QString output;
+    QXmlStreamWriter writer(&output);
+
+//    qDebug() << sizeof(std::vector<std::any>);
+    qDebug() << sizeof(std::unordered_multimap<XmlElementMeta, std::any>) << sizeof(std::unordered_map<XmlElementMeta, std::any>);
+
+    XmlElement xmlEl {
+        "helllo",
+        {},
+        {{"use", "required"}, {"data", "1"}},
+        {{"test2", "THis is a very contenty content.", {}, {}}}
+    };
+
+    serializeMessageExtensions({Test {"MyName"}, std::move(xmlEl)}, writer);
+    qDebug() << output;
 }
 
 /// Constructs a copy of \a other.
