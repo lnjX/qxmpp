@@ -95,6 +95,7 @@ public:
     void setVersion(const QString &);
 
     void addItem(const Item &);
+	void addItems(const QList<Item> &);
     QList<Item> items() const;
 
     // XEP-0405: Mediated Information eXchange (MIX): Participant Server Requirements

@@ -48,6 +48,16 @@ void QXmppRosterIq::addItem(const Item &item)
 }
 
 ///
+/// Adds a bunch of items to the roster IQ.
+///
+/// \param items
+///
+void QXmppRosterIq::addItems(const QList<Item> &items)
+{
+    d->items.append(items);
+}
+
+///
 /// Returns the roster IQ's items.
 ///
 QList<QXmppRosterIq::Item> QXmppRosterIq::items() const
