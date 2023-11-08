@@ -10,7 +10,7 @@ namespace QXmpp::Private {
 
 struct TaskData
 {
-    QPointer<QObject> context;
+    QPointer<const QObject> context;
     std::function<void(TaskPrivate &, void *)> continuation;
     void *result = nullptr;
     void (*freeResult)(void *);
@@ -51,7 +51,7 @@ bool QXmpp::Private::TaskPrivate::isContextAlive()
     return !d->context.isNull();
 }
 
-void QXmpp::Private::TaskPrivate::setContext(QObject *obj)
+void QXmpp::Private::TaskPrivate::setContext(const QObject *obj)
 {
     d->context = obj;
 }
