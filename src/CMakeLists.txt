@@ -84,6 +84,7 @@ set(INSTALL_HEADER_FILES
     base/QXmppUtils.h
     base/QXmppVCardIq.h
     base/QXmppVersionIq.h
+    base/QXmppWait.h
     base/compat/QXmppPubSubIq.h
     base/compat/QXmppPubSubItem.h
 
