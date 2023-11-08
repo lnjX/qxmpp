@@ -505,6 +505,19 @@ QXmppRosterIq::Item QXmppRosterManager::getRosterEntry(
 }
 
 ///
+/// Returns the roster.
+///
+QXmppRosterIq QXmppRosterManager::roster() const
+{
+    QXmppRosterIq roster;
+
+    roster.setType(QXmppRosterIq::Set);
+    roster.addItems(d->entries.values());
+
+    return roster;
+}
+
+///
 /// Get all the associated resources with the given bareJid.
 ///
 /// \param bareJid as a QString
