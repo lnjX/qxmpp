@@ -55,6 +55,9 @@ public:
     bool handleStanza(const QDomElement &element) override;
     /// \endcond
 
+	QXmppTask<ExportResult> exportData(Account &account) const;
+    QXmppTask<ImportResult> importData(const Account &account);
+
 Q_SIGNALS:
     /// This signal is emitted when the requested vCard is received
     /// after calling the requestVCard() function.
@@ -63,6 +66,9 @@ Q_SIGNALS:
     /// This signal is emitted when the client's vCard is received
     /// after calling the requestClientVCard() function.
     void clientVCardReceived();
+
+protected:
+	void setClient(QXmppClient *client) override;
 
 private:
     const std::unique_ptr<QXmppVCardManagerPrivate> d;

@@ -18,8 +18,6 @@
 #include <QObject>
 #include <QStringList>
 
-template<typename T>
-class QXmppTask;
 class QXmppRosterManagerPrivate;
 
 ///
@@ -84,6 +82,9 @@ public:
     bool handleStanza(const QDomElement &element) override;
     /// \endcond
 
+	QXmppTask<ExportResult> exportData(Account &account) const;
+    QXmppTask<ImportResult> importData(const Account &account);
+
 public Q_SLOTS:
     bool acceptSubscription(const QString &bareJid, const QString &reason = {});
     bool refuseSubscription(const QString &bareJid, const QString &reason = {});
@@ -129,6 +130,9 @@ Q_SIGNALS:
     /// This signal is emitted when the roster entry of a particular bareJid is
     /// removed as a result of roster push.
     void itemRemoved(const QString &bareJid);
+
+protected:
+	void setClient(QXmppClient *client) override;
 
 private Q_SLOTS:
     void _q_connected();

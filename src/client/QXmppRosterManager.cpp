@@ -6,11 +6,13 @@
 
 #include "QXmppRosterManager.h"
 
+#include "QXmppAccountMigrationManager.h"
 #include "QXmppClient.h"
 #include "QXmppFutureUtils_p.h"
 #include "QXmppPresence.h"
 #include "QXmppRosterIq.h"
 #include "QXmppUtils.h"
+#include "QXmppWait.h"
 
 #include <QDomElement>
 
@@ -209,6 +211,53 @@ bool QXmppRosterManager::handleStanza(const QDomElement &element)
     return true;
 }
 /// \endcond
+
+QXmppTask<QXmppClientExtension::ExportResult> QXmppRosterManager::exportData(Account &account) const
+{
+    QXmppPromise<ExportResult> promise;
+
+    if (isRosterReceived()) {
+        account.roster = roster();
+        promise.finish();
+    } else {
+        auto wait = new QXmppWait(this, &QXmppRosterManager::rosterReceived);
+
+        wait->then([this, promise, &account](bool ok) mutable {
+            if (ok) {
+                account.roster = roster();
+            } else {
+                account.roster = QXmppError { tr("Did not received Roster."), {} };
+            }
+
+            promise.finish();
+        });
+    }
+
+    return promise.task();
+}
+
+QXmppTask<QXmppClientExtension::ImportResult> QXmppRosterManager::importData(const Account &account)
+{
+    QXmppPromise<ImportResult> promise;
+
+    if (account.roster) {
+        if (auto roster = std::any_cast<QXmppRosterIq>(&*account.roster)) {
+            auto iq = *roster;
+
+            client()->sendGenericIq(std::move(iq)).then(this, [promise](QXmppClient::EmptyResult &&result) mutable {
+                if (std::holds_alternative<QXmpp::Success>(result)) {
+                    promise.finish(ImportResult {});
+                } else {
+                    promise.finish(std::get<QXmppError>(result));
+                }
+            });
+        }
+    } else {
+        promise.finish(ImportResult {});
+    }
+
+    return promise.task();
+}
 
 void QXmppRosterManager::_q_presenceReceived(const QXmppPresence &presence)
 {
@@ -476,6 +525,15 @@ bool QXmppRosterManager::unsubscribe(const QString &bareJid, const QString &reas
     packet.setType(QXmppPresence::Unsubscribe);
     packet.setStatusText(reason);
     return client()->sendPacket(packet);
+}
+
+void QXmppRosterManager::setClient(QXmppClient *client)
+{
+    QXmppClientExtension::setClient(client);
+
+    if (auto manager = client->findExtension<QXmppAccountMigrationManager>()) {
+        manager->registerExtension(this);
+    }
 }
 
 ///

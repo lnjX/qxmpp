@@ -4,10 +4,13 @@
 
 #include "QXmppVCardManager.h"
 
+#include "QXmppAccountMigrationManager.h"
 #include "QXmppClient.h"
 #include "QXmppConstants_p.h"
+#include "QXmppPromise.h"
 #include "QXmppUtils.h"
 #include "QXmppVCardIq.h"
+#include "QXmppWait.h"
 
 class QXmppVCardManagerPrivate
 {
@@ -104,5 +107,66 @@ bool QXmppVCardManager::handleStanza(const QDomElement &element)
     }
 
     return false;
+}
+
+QXmppTask<QXmppClientExtension::ExportResult> QXmppVCardManager::exportData(Account &account) const
+{
+    QXmppPromise<ExportResult> promise;
+
+    if (isClientVCardReceived()) {
+        account.vcard = clientVCard();
+        promise.finish();
+    } else {
+        auto wait = new QXmppWait(this, &QXmppVCardManager::clientVCardReceived);
+
+        wait->then([this, promise, &account](bool result) mutable {
+            if (result) {
+                auto vcard = clientVCard();
+                vcard.setTo("");
+                vcard.setFrom("");
+                vcard.setType(QXmppIq::Set);
+
+                account.vcard = std::move(vcard);
+            } else {
+                account.vcard = QXmppError { tr("Did not received VCard."), {} };
+            }
+
+            promise.finish();
+        });
+    }
+
+    return promise.task();
+}
+
+QXmppTask<QXmppClientExtension::ImportResult> QXmppVCardManager::importData(const Account &account)
+{
+    QXmppPromise<ImportResult> promise;
+
+    if (account.vcard) {
+        if (auto vcard = std::any_cast<QXmppVCardIq>(&*account.vcard)) {
+            auto iq = *vcard;
+
+            client()->sendGenericIq(std::move(iq)).then(this, [promise](QXmppClient::EmptyResult &&result) mutable {
+                if (std::holds_alternative<QXmpp::Success>(result)) {
+                    promise.finish(ImportResult {});
+                } else {
+                    promise.finish(std::get<QXmppError>(result));
+                }
+            });
+        }
+    } else {
+        promise.finish(ImportResult {});
+    }
+
+    return promise.task();
+}
+
+void QXmppVCardManager::setClient(QXmppClient *client)
+{
+    QXmppClientExtension::setClient(client);
+
+    if (auto manager = client->findExtension<QXmppAccountMigrationManager>()) {
+        manager->registerExtension(this);
+    }
 }
 /// \endcond

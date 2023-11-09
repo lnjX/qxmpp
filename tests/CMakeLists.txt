@@ -24,6 +24,7 @@ include_directories(${PROJECT_BINARY_DIR}/src/omemo)
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
 add_simple_test(qxmpparchiveiq)
+add_simple_test(qxmppaccountmigrationmanager)
 add_simple_test(qxmppatmmanager)
 add_simple_test(qxmppattentionmanager)
 add_simple_test(qxmppbindiq)

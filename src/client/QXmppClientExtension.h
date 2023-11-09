@@ -9,14 +9,19 @@
 #include "QXmppExtension.h"
 #include "QXmppLogger.h"
 
+#include <any>
+#include <functional>
 #include <memory>
 
 class QDomElement;
 
 class QXmppClient;
 class QXmppClientExtensionPrivate;
+class QXmppError;
 class QXmppMessage;
 class QXmppStream;
+template<typename T>
+class QXmppTask;
 
 ///
 /// \brief The QXmppClientExtension class is the base class for QXmppClient
@@ -34,6 +39,19 @@ class QXMPP_EXPORT QXmppClientExtension : public QXmppLoggable, public QXmppExte
     Q_OBJECT
 
 public:
+	struct Account
+    {
+        QString bareJid;
+        std::optional<std::any> vcard; // QXmppVCardIq or QXmppError
+        std::optional<std::any> roster; // QXmppRosterIq or QXmppError
+    };
+
+	using ExportResult = void;
+	using ExportCallback = std::function<QXmppTask<ExportResult>(Account &)>;
+
+	using ImportResult = std::optional<QXmppError>;
+    using ImportCallback = std::function<QXmppTask<ImportResult>(const Account &)>;
+
     QXmppClientExtension();
     ~QXmppClientExtension() override;
 
