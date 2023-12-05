@@ -1,4 +1,5 @@
 // SPDX-FileCopyrightText: 2023 Filipe Azevedo <pasnox@gmail.com>
+// SPDX-FileCopyrightText: 2023 Linus Jahn <lnj@kaidan.im>
 //
 // SPDX-License-Identifier: LGPL-2.1-or-later
 
@@ -7,6 +8,80 @@
 #include "QXmppClient.h"
 #include "QXmppPromise.h"
 #include "QXmppTask.h"
+
+// Utilities for account data extensions
+using AnyParser = QXmppAccountData::ExtensionParser<std::any>;
+using AnySerializer = QXmppAccountData::ExtensionSerializer<std::any>;
+
+struct XmlElementId
+{
+    QStringView tagName;
+    QStringView xmlns;
+
+    bool operator==(const XmlElementId &other) const
+    {
+        return tagName == other.tagName && xmlns == other.xmlns;
+    }
+};
+
+template<>
+struct std::hash<XmlElementId>
+{
+    std::size_t operator()(const XmlElementId &m) const noexcept
+    {
+        auto h1 = std::hash<QStringView> {}(m.tagName);
+        auto h2 = std::hash<QStringView> {}(m.xmlns);
+        return h1 ^ (h2 << 1);
+    }
+};
+
+static std::unordered_map<XmlElementId, AnyParser> &accountDataParsers()
+{
+    thread_local static std::unordered_map<XmlElementId, AnyParser> registry;
+    return registry;
+}
+
+static std::unordered_map<std::type_index, AnySerializer> &accountDataSerializers()
+{
+    thread_local static std::unordered_map<std::type_index, AnySerializer> registry;
+    return registry;
+}
+
+struct QXmppAccountDataPrivate : public QSharedData
+{
+    QVector<std::any> extensions;
+};
+
+QXMPP_PRIVATE_DEFINE_RULE_OF_SIX(QXmppAccountData)
+
+std::variant<QXmppAccountData, QXmppError> QXmppAccountData::fromDom(const QDomElement &el)
+{
+    // use accountDataParsers()
+}
+
+void QXmppAccountData::toXml(QXmlStreamWriter *writer) const
+{
+    // use accountDataSerializers()
+}
+
+void QXmppAccountData::registerExtensionInternal(std::type_index type, ExtensionParser<std::any> parse, ExtensionSerializer<std::any> serialize, QStringView tagName, QStringView xmlns)
+{
+    accountDataParsers().emplace(XmlElementId { tagName, xmlns }, parse);
+    accountDataSerializers().emplace(type, serialize);
+}
+
+struct QXmppAccountMigrationManagerPrivate
+{
+    using ImportFunction = std::function<QXmppTask<std::variant<QXmpp::Success, QXmppError>>(std::any)>;
+    using ExportFunction = std::function<QXmppTask<std::variant<std::any, QXmppError>>()>;
+
+    struct ExtensionData
+    {
+        ImportFunction importFunction;
+        ExportFunction exportFunction;
+    };
+    std::unordered_map<std::type_index, ExtensionData> extensions;
+};
 
 ///
 /// \brief The QXmppAccountMigrationManager class provides access to account migration.
@@ -55,7 +130,10 @@
 ///
 /// Constructs an account migration manager.
 ///
-QXmppAccountMigrationManager::QXmppAccountMigrationManager() = default;
+QXmppAccountMigrationManager::QXmppAccountMigrationManager()
+    : d(std::make_unique<QXmppAccountMigrationManagerPrivate>())
+{
+}
 
 QXmppAccountMigrationManager::~QXmppAccountMigrationManager() = default;
 
@@ -63,28 +141,31 @@ QXmppAccountMigrationManager::~QXmppAccountMigrationManager() = default;
 /// \brief Create an export task.
 /// \return Returns Data on success or QXmppError on error.
 ///
-QXmppTask<QXmppAccountMigrationManager::Account> QXmppAccountMigrationManager::exportData()
+QXmppTask<QXmppAccountMigrationManager::ExportResult> QXmppAccountMigrationManager::exportData()
 {
-    QXmppPromise<Account> promise;
-    auto account = std::make_shared<Account>();
-    auto counter = std::make_shared<int>(m_registeredExtensions.count());
-    auto it = m_registeredExtensions.constBegin();
+    QXmppPromise<ExportResult> promise;
 
-    account->bareJid = client()->configuration().jidBare();
+    // use d->extensions
 
-    while (it != m_registeredExtensions.constEnd()) {
-        it->exportCallback(*account).then(this, [promise, account, counter]() mutable {
-            if ((--(*counter)) == 0) {
-                promise.finish(*account);
-            }
-        });
+    //    auto account = std::make_shared<Account>();
+    //    auto counter = std::make_shared<int>(m_registeredExtensions.count());
+    //    auto it = m_registeredExtensions.constBegin();
 
-        ++it;
-    }
+    //    account->bareJid = client()->configuration().jidBare();
 
-    if (m_registeredExtensions.isEmpty()) {
-        promise.finish(*account);
-    }
+    //    while (it != m_registeredExtensions.constEnd()) {
+    //        it->exportCallback(*account).then(this, [promise, account, counter]() mutable {
+    //            if ((--(*counter)) == 0) {
+    //                promise.finish(*account);
+    //            }
+    //        });
+
+    //        ++it;
+    //    }
+
+    //    if (m_registeredExtensions.isEmpty()) {
+    //        promise.finish(*account);
+    //    }
 
     return promise.task();
 }
@@ -94,38 +175,47 @@ QXmppTask<QXmppAccountMigrationManager::Account> QXmppAccountMigrationManager::e
 /// \param data The data to import.
 /// \return Returns QXmppError, if there is no error the error is empty.
 ///
-QXmppTask<QList<QXmppError>> QXmppAccountMigrationManager::importData(const Account &account)
+QXmppTask<QXmppAccountMigrationManager::ImportResult> QXmppAccountMigrationManager::importData(const QXmppAccountData &account)
 {
-    using ErrorList = QList<QXmppError>;
-    QXmppPromise<ErrorList> promise;
+    QXmppPromise<ImportResult> promise;
 
-    if (client()->configuration().jidBare() == account.bareJid) {
-        promise.finish(ErrorList { QXmppError { tr("Can not import data into the same account."), {} } });
-    } else {
-        auto errors = std::make_shared<ErrorList>();
-        auto counter = std::make_shared<int>(m_registeredExtensions.count());
-        auto it = m_registeredExtensions.constBegin();
+    // use d->extensions
 
-        errors->reserve(m_registeredExtensions.count());
+    //    if (client()->configuration().jidBare() == account.bareJid) {
+    //        promise.finish(ErrorList { QXmppError { tr("Can not import data into the same account."), {} } });
+    //    } else {
+    //        auto errors = std::make_shared<ErrorList>();
+    //        auto counter = std::make_shared<int>(m_registeredExtensions.count());
+    //        auto it = m_registeredExtensions.constBegin();
 
-        while (it != m_registeredExtensions.constEnd()) {
-            it->importCallback(account).then(this, [promise, errors, counter](ImportResult &&result) mutable {
-                if (result) {
-                    errors->append(std::move(*result));
-                }
+    //        errors->reserve(m_registeredExtensions.count());
 
-                if ((--(*counter)) == 0) {
-                    promise.finish(*errors);
-                }
-            });
+    //        while (it != m_registeredExtensions.constEnd()) {
+    //            it->importCallback(account).then(this, [promise, errors, counter](ImportResult &&result) mutable {
+    //                if (result) {
+    //                    errors->append(std::move(*result));
+    //                }
 
-            ++it;
-        }
+    //                if ((--(*counter)) == 0) {
+    //                    promise.finish(*errors);
+    //                }
+    //            });
 
-        if (m_registeredExtensions.isEmpty()) {
-            promise.finish(*errors);
-        }
-    }
+    //            ++it;
+    //        }
+
+    //        if (m_registeredExtensions.isEmpty()) {
+    //            promise.finish(*errors);
+    //        }
+    //    }
 
     return promise.task();
+}
+
+void QXmppAccountMigrationManager::registerMigrationDataInternal(std::type_index dataType, ImportCallback importFunc, ExportCallback exportFunc)
+{
+}
+
+void QXmppAccountMigrationManager::unregisterMigrationDataInternal(std::type_index dataType)
+{
 }

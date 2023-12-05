@@ -109,6 +109,7 @@ bool QXmppVCardManager::handleStanza(const QDomElement &element)
     return false;
 }
 
+/*
 QXmppTask<QXmppClientExtension::ExportResult> QXmppVCardManager::exportData(Account &account) const
 {
     QXmppPromise<ExportResult> promise;
@@ -160,13 +161,14 @@ QXmppTask<QXmppClientExtension::ImportResult> QXmppVCardManager::importData(cons
 
     return promise.task();
 }
+*/
 
 void QXmppVCardManager::setClient(QXmppClient *client)
 {
     QXmppClientExtension::setClient(client);
 
     if (auto manager = client->findExtension<QXmppAccountMigrationManager>()) {
-        manager->registerExtension(this);
+        // manager->registerExtension(this);
     }
 }
 /// \endcond

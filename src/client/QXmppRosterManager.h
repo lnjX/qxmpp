@@ -18,6 +18,7 @@
 #include <QObject>
 #include <QStringList>
 
+class QXmppAccountData;
 class QXmppRosterManagerPrivate;
 
 ///
@@ -81,9 +82,6 @@ public:
     /// \cond
     bool handleStanza(const QDomElement &element) override;
     /// \endcond
-
-	QXmppTask<ExportResult> exportData(Account &account) const;
-    QXmppTask<ImportResult> importData(const Account &account);
 
 public Q_SLOTS:
     bool acceptSubscription(const QString &bareJid, const QString &reason = {});

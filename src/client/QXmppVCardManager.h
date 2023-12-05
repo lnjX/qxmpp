@@ -55,8 +55,8 @@ public:
     bool handleStanza(const QDomElement &element) override;
     /// \endcond
 
-	QXmppTask<ExportResult> exportData(Account &account) const;
-    QXmppTask<ImportResult> importData(const Account &account);
+    // QXmppTask<ExportResult> exportData(Account &account) const;
+    // QXmppTask<ImportResult> importData(const Account &account);
 
 Q_SIGNALS:
     /// This signal is emitted when the requested vCard is received

@@ -12,11 +12,15 @@
 #include "QXmppPresence.h"
 #include "QXmppRosterIq.h"
 #include "QXmppUtils.h"
-#include "QXmppWait.h"
 
 #include <QDomElement>
 
+using namespace QXmpp;
 using namespace QXmpp::Private;
+
+struct RosterAccountData
+{
+};
 
 ///
 /// \fn QXmppRosterManager::subscriptionRequestReceived
@@ -211,53 +215,6 @@ bool QXmppRosterManager::handleStanza(const QDomElement &element)
     return true;
 }
 /// \endcond
-
-QXmppTask<QXmppClientExtension::ExportResult> QXmppRosterManager::exportData(Account &account) const
-{
-    QXmppPromise<ExportResult> promise;
-
-    if (isRosterReceived()) {
-        account.roster = roster();
-        promise.finish();
-    } else {
-        auto wait = new QXmppWait(this, &QXmppRosterManager::rosterReceived);
-
-        wait->then([this, promise, &account](bool ok) mutable {
-            if (ok) {
-                account.roster = roster();
-            } else {
-                account.roster = QXmppError { tr("Did not received Roster."), {} };
-            }
-
-            promise.finish();
-        });
-    }
-
-    return promise.task();
-}
-
-QXmppTask<QXmppClientExtension::ImportResult> QXmppRosterManager::importData(const Account &account)
-{
-    QXmppPromise<ImportResult> promise;
-
-    if (account.roster) {
-        if (auto roster = std::any_cast<QXmppRosterIq>(&*account.roster)) {
-            auto iq = *roster;
-
-            client()->sendGenericIq(std::move(iq)).then(this, [promise](QXmppClient::EmptyResult &&result) mutable {
-                if (std::holds_alternative<QXmpp::Success>(result)) {
-                    promise.finish(ImportResult {});
-                } else {
-                    promise.finish(std::get<QXmppError>(result));
-                }
-            });
-        }
-    } else {
-        promise.finish(ImportResult {});
-    }
-
-    return promise.task();
-}
 
 void QXmppRosterManager::_q_presenceReceived(const QXmppPresence &presence)
 {
@@ -527,12 +484,40 @@ bool QXmppRosterManager::unsubscribe(const QString &bareJid, const QString &reas
     return client()->sendPacket(packet);
 }
 
-void QXmppRosterManager::setClient(QXmppClient *client)
+void QXmppRosterManager::setClient(QXmppClient *newClient)
 {
-    QXmppClientExtension::setClient(client);
+    if (client()) {
+        if (auto manager = client()->findExtension<QXmppAccountMigrationManager>()) {
+            manager->unregisterExtension<RosterAccountData>();
+        }
+    }
 
-    if (auto manager = client->findExtension<QXmppAccountMigrationManager>()) {
-        manager->registerExtension(this);
+    QXmppClientExtension::setClient(newClient);
+
+    if (auto manager = newClient->findExtension<QXmppAccountMigrationManager>()) {
+        auto importData = [this](RosterAccountData data) -> QXmppTask<Result> {
+            // TODO: add roster items from 'data' and return QXmppTask<Result>
+            QXmppPromise<Result> promise;
+            return promise.task();
+        };
+        auto exportData = [this]() -> QXmppTask<std::variant<RosterAccountData, QXmppError>> {
+            using AccountDataResult = std::variant<RosterAccountData, QXmppError>;
+
+            if (isRosterReceived()) {
+                // TODO: actually return data (no empty struct)
+                return makeReadyTask<AccountDataResult>(RosterAccountData {});
+            }
+
+            QXmppRosterIq iq;
+            iq.setType(QXmppIq::Get);
+
+            return chainIq(client()->sendIq(std::move(iq)), this, [](QXmppRosterIq &&iq) -> AccountDataResult {
+                // TODO: return data from iq
+                return RosterAccountData {};
+            });
+        };
+
+        manager->registerExtension<RosterAccountData>(importData, exportData);
     }
 }
 
