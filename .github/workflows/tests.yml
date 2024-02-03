@@ -84,8 +84,7 @@ jobs:
         run: |
           ${env:PATH} += ";D:/a/qxmpp/qxmpp/src/Debug"
           cmake . && cmake --build .
-          # ctest
-          # ctest --rerun-failed --output-on-failure
+          ctest --rerun-failed --output-on-failure
 
   xmllint:
     runs-on: ubuntu-latest
