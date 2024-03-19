@@ -124,6 +124,19 @@ void QXmppStream::setSocket(QSslSocket *socket)
 
 namespace QXmpp::Private {
 
+std::optional<StreamOpen> StreamOpen::fromXml(QXmlStreamReader &reader)
+{
+    if (reader.isStartDocument()) {
+        reader.readNext();
+    }
+    if (reader.isStartElement()) {
+        for (const auto &attribute : reader.attributes()) {
+            if (attribute.qualifiedName() == u"from")
+                ;
+        }
+    }
+}
+
 void StreamOpen::toXml(QXmlStreamWriter *writer) const
 {
     writer->writeStartDocument();

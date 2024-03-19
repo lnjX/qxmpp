@@ -7,11 +7,13 @@
 
 #include <QString>
 
+class QXmlStreamReader;
 class QXmlStreamWriter;
 
 namespace QXmpp::Private {
 
 struct StreamOpen {
+    static std::optional<StreamOpen> fromXml(QXmlStreamReader &);
     void toXml(QXmlStreamWriter *) const;
 
     QString to;
