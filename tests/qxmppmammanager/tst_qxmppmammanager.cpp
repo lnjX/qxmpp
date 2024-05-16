@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: LGPL-2.1-or-later
 
 #include "QXmppMamManager.h"
+#include "QXmppMamMetadata.h"
 #include "QXmppMessage.h"
 
 #include "util.h"
@@ -34,6 +35,8 @@ class tst_QXmppMamManager : public QObject
 private:
     Q_SLOT void initTestCase();
 
+    Q_SLOT void mamMetadata();
+
     Q_SLOT void testHandleStanza_data();
     Q_SLOT void testHandleStanza();
 
@@ -51,6 +54,24 @@ void tst_QXmppMamManager::initTestCase()
 
     connect(&m_manager, &QXmppMamManager::resultsRecieved,
             &m_helper, &QXmppMamTestHelper::resultsRecieved);
+}
+
+void tst_QXmppMamManager::mamMetadata()
+{
+    auto xml =
+        "<metadata xmlns='urn:xmpp:mam:2'>"
+        "<start id='YWxwaGEg' timestamp='2008-08-22T21:09:04Z'/>"
+        "<end id='b21lZ2Eg' timestamp='2020-04-20T14:34:21Z'/>"
+        "</metadata>";
+
+    auto metadata = unwrap(QXmppMamMetadata::fromDom(xmlToDom(xml)));
+    auto range = unwrap(metadata.archiveRange());
+    QCOMPARE(range.start.id, "YWxwaGEg");
+    QCOMPARE(range.end.id, "b21lZ2Eg");
+    QCOMPARE(range.start.timestamp, QDateTime({ 2008, 8, 22 }, { 21, 9, 4 }, Qt::UTC));
+    QCOMPARE(range.end.timestamp, QDateTime({ 2020, 4, 20 }, { 14, 34, 21 }, Qt::UTC));
+
+    serializePacket(metadata, xml);
 }
 
 void tst_QXmppMamManager::testHandleStanza_data()

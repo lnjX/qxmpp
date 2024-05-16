@@ -45,6 +45,7 @@ set(INSTALL_HEADER_FILES
     base/QXmppJingleData.h
     base/QXmppLogger.h
     base/QXmppMamIq.h
+    base/QXmppMamMetadata.h
     base/QXmppMessage.h
     base/QXmppMessageReaction.h
     base/QXmppMixConfigItem.h

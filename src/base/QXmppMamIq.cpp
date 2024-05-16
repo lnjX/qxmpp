@@ -1,10 +1,13 @@
 // SPDX-FileCopyrightText: 2016 Niels Ole Salscheider <niels_ole@salscheider-online.de>
+// SPDX-FileCopyrightText: 2024 Linus Jahn <lnj@kaidan.im>
 //
 // SPDX-License-Identifier: LGPL-2.1-or-later
 
 #include "QXmppMamIq.h"
 
 #include "QXmppConstants_p.h"
+#include "QXmppMamMetadata.h"
+#include "QXmppUtils.h"
 #include "QXmppUtils_p.h"
 
 #include <QDomElement>
@@ -257,3 +260,69 @@ void QXmppMamResultIq::toXmlElementFromChild(QXmlStreamWriter *writer) const
     writer->writeEndElement();
 }
 /// \endcond
+
+class QXmppMamMetadataData : public QSharedData
+{
+public:
+    std::optional<QXmppMamMetadata::Range> archiveRange;
+};
+
+QXmppMamMetadata::QXmppMamMetadata()
+    : d(new QXmppMamMetadataData)
+{
+}
+
+QXMPP_PRIVATE_DEFINE_RULE_OF_SIX(QXmppMamMetadata)
+
+std::optional<QXmppMamMetadata::Range> QXmppMamMetadata::archiveRange() const
+{
+    return d->archiveRange;
+}
+
+void QXmppMamMetadata::setArchiveRange(const std::optional<Range> &range)
+{
+    d->archiveRange = range;
+}
+
+std::optional<QXmppMamMetadata> QXmppMamMetadata::fromDom(const QDomElement &el)
+{
+    if (el.tagName() != u"metadata" || el.namespaceURI() != ns_mam) {
+        return {};
+    }
+
+    QXmppMamMetadata result;
+
+    auto startEl = firstChildElement(el, u"start", ns_mam);
+    auto endEl = firstChildElement(el, u"end", ns_mam);
+    if (!startEl.isNull() && !endEl.isNull()) {
+        result.d->archiveRange = Range {
+            MessageReference {
+                startEl.attribute(QStringLiteral("id")),
+                QXmppUtils::datetimeFromString(startEl.attribute(QStringLiteral("timestamp"))),
+            },
+            MessageReference {
+                endEl.attribute(QStringLiteral("id")),
+                QXmppUtils::datetimeFromString(endEl.attribute(QStringLiteral("timestamp"))),
+            },
+        };
+    }
+    return result;
+}
+
+void QXmppMamMetadata::toXml(QXmlStreamWriter *w) const
+{
+    w->writeStartElement(QSL65("metadata"));
+    w->writeDefaultNamespace(toString65(ns_mam));
+    if (d->archiveRange) {
+        w->writeStartElement(QSL65("start"));
+        w->writeAttribute(QSL65("id"), d->archiveRange->start.id);
+        w->writeAttribute(QSL65("timestamp"), QXmppUtils::datetimeToString(d->archiveRange->start.timestamp));
+        w->writeEndElement();
+
+        w->writeStartElement(QSL65("end"));
+        w->writeAttribute(QSL65("id"), d->archiveRange->end.id);
+        w->writeAttribute(QSL65("timestamp"), QXmppUtils::datetimeToString(d->archiveRange->end.timestamp));
+        w->writeEndElement();
+    }
+    w->writeEndElement();
+}
