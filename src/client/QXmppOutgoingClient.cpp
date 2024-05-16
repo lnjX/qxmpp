@@ -456,6 +456,7 @@ void QXmppOutgoingClient::openSession()
         d->c2sStreamManager.enabled(),
         d->c2sStreamManager.streamResumed(),
         d->bind2Bound.has_value(),
+        d->bind2Bound ? d->bind2Bound->mamMetadata : std::nullopt,
     };
     d->bind2Bound.reset();
 

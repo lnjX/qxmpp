@@ -10,6 +10,7 @@
 #include "QXmppAuthenticationError.h"
 #include "QXmppBindError.h"
 #include "QXmppClient.h"
+#include "QXmppMamMetadata.h"
 #include "QXmppPromise.h"
 #include "QXmppStanza.h"
 #include "QXmppStreamError.h"
@@ -53,6 +54,7 @@ struct SessionBegin {
     bool smEnabled;
     bool smResumed;
     bool bind2Used;
+    std::optional<QXmppMamMetadata> mamMetadata;
 };
 
 struct SessionEnd {

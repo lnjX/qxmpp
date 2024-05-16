@@ -244,6 +244,7 @@ std::optional<Bind2Bound> Bind2Bound::fromDom(const QDomElement &el)
     return Bind2Bound {
         .smFailed = SmFailed::fromDom(firstChildElement(el, u"failed", ns_stream_management)),
         .smEnabled = SmEnabled::fromDom(firstChildElement(el, u"enabled", ns_stream_management)),
+        .mamMetadata = QXmppMamMetadata::fromDom(firstChildElement(el, u"metadata", ns_mam)),
     };
 }
 
@@ -256,6 +257,9 @@ void Bind2Bound::toXml(QXmlStreamWriter *writer) const
     }
     if (smEnabled) {
         smEnabled->toXml(writer);
+    }
+    if (mamMetadata) {
+        mamMetadata->toXml(writer);
     }
     writer->writeEndElement();
 }

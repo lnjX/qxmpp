@@ -7,10 +7,11 @@
 
 #include "QXmppClient.h"
 #include "QXmppConstants_p.h"
-#include "QXmppDataForm.h"
 #include "QXmppE2eeExtension.h"
 #include "QXmppMamIq.h"
+#include "QXmppMamMetadata.h"
 #include "QXmppMessage.h"
+#include "QXmppOutgoingClient.h"
 #include "QXmppPromise.h"
 #include "QXmppUtils.h"
 #include "QXmppUtils_p.h"
@@ -100,6 +101,7 @@ class QXmppMamManagerPrivate
 public:
     // std::string because older Qt 5 versions don't add std::hash support for QString
     std::unordered_map<std::string, RetrieveRequestState> ongoingRequests;
+    std::optional<QXmppMamMetadata> initialMamMetadata;
 };
 
 ///
@@ -168,6 +170,20 @@ bool QXmppMamManager::handleStanza(const QDomElement &element)
     }
 
     return false;
+}
+
+void QXmppMamManager::onRegistered(QXmppClient *c)
+{
+    connect(c->stream(), &QXmppOutgoingClient::connected, this, [this](const auto &session) {
+        if (session.mamMetadata) {
+            Q_EMIT initialMamMetadataReceived(*session.mamMetadata);
+        }
+    });
+}
+
+void QXmppMamManager::onUnregistered(QXmppClient *c)
+{
+    disconnect(c->stream(), &QXmppOutgoingClient::connected, this, nullptr);
 }
 /// \endcond
 

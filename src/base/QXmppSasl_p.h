@@ -10,6 +10,7 @@
 
 #include "QXmppGlobal.h"
 #include "QXmppLogger.h"
+#include "QXmppMamMetadata.h"
 #include "QXmppNonza.h"
 #include "QXmppStreamManagement_p.h"
 
@@ -124,6 +125,7 @@ struct Bind2Bound {
     // extensions
     std::optional<SmFailed> smFailed;
     std::optional<SmEnabled> smEnabled;
+    std::optional<QXmppMamMetadata> mamMetadata;
 };
 
 }  // namespace QXmpp::Private
