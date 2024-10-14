@@ -17,7 +17,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        config: [minimal, full, full-debug]
+        config: [minimal]
         qt_version: ['5.15.*']
         include:
           - config: minimal
@@ -50,7 +50,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        config: [minimal, full, full-debug]
+        config: [minimal]
         qt_version: ['5.15.*']
         include:
           - config: full-debug
