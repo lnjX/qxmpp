@@ -83,20 +83,30 @@ jobs:
         qt_version: ['5.15.*', '6.7.*']
     steps:
       - uses: actions/checkout@v3
-      - name: Install Qt
-        uses: jurplel/install-qt-action@v3
-        with:
-          version: ${{ matrix.qt_version }}
+      # - name: Install Qt
+      #   uses: jurplel/install-qt-action@v3
+      #   with:
+      #     version: ${{ matrix.qt_version }}
       - name: Run tests
         run: |
+          git clone https://invent.kde.org/packaging/craftmaster.git --branch=master
+
+          function Run-CraftMaster {
+            python craftmaster/CraftMaster.py --config D:/a/qxmpp/qxmpp/tests/travis/CraftConfig.ini --target windows-msvc2019_64-cl $args
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
+
+          Run-CraftMaster --setup
+          Run-CraftMaster -c -i --options virtual.ignored=True --update craft
+
           ${env:PATH} += ";D:/a/qxmpp/qxmpp/src/Debug"
-          git clone https://github.com/dino/libomemo-c
-          cd libomemo-c
-          mkdir D:/a/usr
-          cmake . -DCMAKE_INSTALL_PREFIX="D:/a/usr"
-          cmake --build .
-          cmake --install .
-          cd ..
+          # git clone https://github.com/dino/libomemo-c
+          # cd libomemo-c
+          # mkdir D:/a/usr
+          # cmake . -DCMAKE_INSTALL_PREFIX="D:/a/usr"
+          # cmake --build .
+          # cmake --install .
+          # cd ..
           cmake . -DBUILD_OMEMO=ON && cmake --build .
           # ctest
           # ctest --rerun-failed --output-on-failure
