@@ -125,9 +125,9 @@ void tst_QXmppPubSubManager::testRequestFeatures()
     auto [test, psManager] = Client();
 
     auto future = psManager->requestFeatures("pubsub.shakespeare.lit");
-    test.expect(QStringLiteral("<iq id='qxmpp1' to='pubsub.shakespeare.lit' type='get'>"
-                               "<query xmlns='http://jabber.org/protocol/disco#info'/>"
-                               "</iq>"));
+    test.expect(resetStanzaId("<iq id='qxmpp1' to='pubsub.shakespeare.lit' type='get'>"
+                              "<query xmlns='http://jabber.org/protocol/disco#info'/>"
+                              "</iq>"));
     test.inject(QStringLiteral("<iq id='qxmpp1' from='pubsub.shakespeare.lit' to='francisco@denmark.lit/barracks' type='result'>"
                                "<query xmlns='http://jabber.org/protocol/disco#info'>"
                                "<feature var='http://jabber.org/protocol/pubsub'/>"

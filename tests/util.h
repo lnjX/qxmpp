@@ -74,6 +74,44 @@ QString rewriteXml(const String &inputXml)
     return outputXml;
 }
 
+template<typename String>
+QString resetStanzaId(const String &inputXml)
+{
+    QString outputXml;
+    QXmlStreamReader reader(inputXml);
+    QXmlStreamWriter writer(&outputXml);
+
+    // find start
+    reader.readNextStartElement();
+    Q_ASSERT(reader.isStartElement());
+
+    // write element, but without 'id' attribute
+    writer.writeStartElement(reader.name().toString());
+    const auto attributes = reader.attributes();
+    for (const auto &attribute : attributes) {
+        if (attribute.name() != u"id") {
+            writer.writeAttribute(attribute);
+        }
+    }
+
+    // copy rest of the xml
+    while (reader.readNext() != QXmlStreamReader::EndDocument) {
+        if (reader.hasError()) {
+            qDebug() << "Parsing error:";
+            qDebug().noquote() << inputXml;
+            qDebug().noquote() << reader.error() << reader.errorString();
+            throw std::exception();
+        }
+
+        // do not generate '<?xml version="1.0"?>'
+        if (reader.tokenType() == QXmlStreamReader::StartDocument) {
+            continue;
+        }
+        writer.writeCurrentToken(reader);
+    }
+    return outputXml;
+}
+
 template<typename T>
 static QByteArray packetToXml(const T &packet)
 {
